@@ -1,4 +1,3 @@
-// src/main/ipc.ts
 import type { CleakInboundFrame } from './cleakProtocol';
 
 export type BridgeStatus =
@@ -13,11 +12,20 @@ export interface BridgeEventMap {
   error: { message: string };
 }
 
+export interface AppSettings {
+  baseUrl: string;
+  model: string;
+  theme: 'dark' | 'light' | 'high-contrast';
+  apiKey: string;
+}
+
 export const IpcChannels = {
-  sendUserMessage: 'bridge:sendUserMessage',
-  status: 'bridge:status',
-  frame: 'bridge:frame',
-  error: 'bridge:error',
+  sendUserMessage:  'bridge:sendUserMessage',
+  status:           'bridge:status',
+  frame:            'bridge:frame',
+  error:            'bridge:error',
+  loadSettings:     'settings:load',
+  saveSettings:     'settings:save',
 } as const;
 
 export type IpcChannel = (typeof IpcChannels)[keyof typeof IpcChannels];

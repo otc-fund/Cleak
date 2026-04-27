@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import { IpcChannels } from '../main/ipc';
-import type { BridgeStatus, BridgeEventMap } from '../main/ipc';
+import type { BridgeStatus, BridgeEventMap, AppSettings } from '../main/ipc';
 import type { CleakInboundFrame } from '../main/cleakProtocol';
 
 const api = {
@@ -21,6 +21,12 @@ const api = {
     const wrapped = (_e: unknown, p: BridgeEventMap['error']) => handler(p);
     ipcRenderer.on(IpcChannels.error, wrapped);
     return () => ipcRenderer.off(IpcChannels.error, wrapped);
+  },
+  loadSettings(): Promise<AppSettings> {
+    return ipcRenderer.invoke(IpcChannels.loadSettings) as Promise<AppSettings>;
+  },
+  saveSettings(s: AppSettings): Promise<void> {
+    return ipcRenderer.invoke(IpcChannels.saveSettings, s) as Promise<void>;
   },
 };
 

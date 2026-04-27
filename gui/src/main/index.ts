@@ -5,27 +5,25 @@ import { homedir } from 'node:os';
 import { existsSync } from 'node:fs';
 import { CleakBridge } from './bridge';
 import { IpcChannels } from './ipc';
-import type { BridgeStatus } from './ipc';
+import type { BridgeStatus, AppSettings } from './ipc';
 import type { CleakInboundFrame } from './cleakProtocol';
-// Note: anthropicShim is imported dynamically inside createWindow to avoid
-// loading the http server before app.whenReady resolves.
+import { loadSettings, saveSettings } from './settings';
 
 const isDev = !app.isPackaged;
 
 function resolveClaudeBin(): string {
   const fromEnv = process.env['CLAUDE_BIN'];
   if (fromEnv) return fromEnv;
-  // Try common install locations for the Claude Code CLI
   const candidates = [
     join(homedir(), '.local', 'bin', 'claude.exe'),
     join(homedir(), 'AppData', 'Local', 'Programs', 'claude', 'claude.exe'),
-    'claude', // bare name as last resort (may not work via pipe on Windows)
+    'claude',
   ];
   for (const c of candidates) {
     if (!c.includes('*') && (c === 'claude' || existsSync(c))) return c;
   }
-  console.warn('[cleak-gui] WARNING: claude.exe not found; set CLAUDE_BIN env var. Bridge will fail to start.');
-  return candidates[0]!; // return best guess so bridge can report the error naturally
+  console.warn('[cleak-gui] WARNING: claude.exe not found; set CLAUDE_BIN env var.');
+  return candidates[0]!;
 }
 
 function resolveSdkCwd(): string {
@@ -34,23 +32,27 @@ function resolveSdkCwd(): string {
 
 function buildEnv(shimPort: number): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = { ...process.env };
-  // Point claude.exe at the local translation shim, not the OpenAI server directly.
-  // The shim accepts Anthropic Messages API and forwards as OpenAI chat completions.
   env['ANTHROPIC_BASE_URL'] = `http://127.0.0.1:${shimPort}`;
   env['ANTHROPIC_API_KEY'] = 'shim-passthrough';
   if (process.env['ANTHROPIC_MODEL']) env['ANTHROPIC_MODEL'] = process.env['ANTHROPIC_MODEL'];
   return env;
 }
 
+// Wire settings IPC — must be called before any window is created.
+function registerSettingsIpc(): void {
+  ipcMain.handle(IpcChannels.loadSettings, (): AppSettings => loadSettings());
+  ipcMain.handle(IpcChannels.saveSettings, (_e, s: AppSettings): void => saveSettings(s));
+}
+
 async function createWindow(): Promise<void> {
-  // Start the Anthropic→OpenAI shim before creating the window so the bridge
-  // can point claude.exe at the shim port on startup.
+  // Load persisted settings to configure the shim (API key, model, baseUrl)
+  const stored = loadSettings();
+  const baseUrl = process.env['ANTHROPIC_BASE_URL'] ?? stored.baseUrl;
+  const apiKey  = process.env['ANTHROPIC_API_KEY']  ?? stored.apiKey;
+  const model   = process.env['ANTHROPIC_MODEL']    ?? stored.model;
+
   const { createAnthropicShim } = await import('./anthropicShim');
-  const shim = await createAnthropicShim({
-    upstreamBaseUrl: process.env['ANTHROPIC_BASE_URL'] ?? 'http://localhost:3003/v1',
-    upstreamApiKey: process.env['ANTHROPIC_API_KEY'] ?? '',
-    model: process.env['ANTHROPIC_MODEL'] ?? 'qwen3.6-plus',
-  });
+  const shim = await createAnthropicShim({ upstreamBaseUrl: baseUrl, upstreamApiKey: apiKey, model });
 
   const win = new BrowserWindow({
     width: 1280,
@@ -93,11 +95,13 @@ async function createWindow(): Promise<void> {
   });
 
   bridge.start();
-
   win.on('closed', () => { bridge.stop(); shim.close(); });
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  registerSettingsIpc();
+  void createWindow();
+});
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });

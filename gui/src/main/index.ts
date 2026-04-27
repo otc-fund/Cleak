@@ -13,17 +13,26 @@ const isDev = !app.isPackaged;
 
 function resolveClaudeBin(): string {
   const fromEnv = process.env['CLAUDE_BIN'];
-  if (fromEnv) return fromEnv;
+  if (fromEnv) { console.log('[cleak-gui] claude bin from CLAUDE_BIN:', fromEnv); return fromEnv; }
   const candidates = [
-    join(homedir(), '.local', 'bin', 'claude.exe'),
+    // Windows installer
     join(homedir(), 'AppData', 'Local', 'Programs', 'claude', 'claude.exe'),
+    // npm global install (Windows creates a .cmd shim — needs shell:true)
+    join(homedir(), 'AppData', 'Roaming', 'npm', 'claude.cmd'),
+    // Linux/Mac npm global
+    join(homedir(), '.local', 'bin', 'claude'),
+    join(homedir(), '.local', 'bin', 'claude.exe'),
+    // Last resort: bare name via PATH
     'claude',
   ];
   for (const c of candidates) {
-    if (!c.includes('*') && (c === 'claude' || existsSync(c))) return c;
+    if (c === 'claude' || existsSync(c)) {
+      console.log('[cleak-gui] claude bin resolved to:', c);
+      return c;
+    }
   }
-  console.warn('[cleak-gui] WARNING: claude.exe not found; set CLAUDE_BIN env var.');
-  return candidates[0]!;
+  console.warn('[cleak-gui] WARNING: claude not found; set CLAUDE_BIN env var to the full path.');
+  return 'claude';
 }
 
 function resolveSdkCwd(): string {
@@ -88,11 +97,16 @@ async function createWindow(): Promise<void> {
     await win.loadFile(resolve(__dirname, '../renderer/index.html'));
   }
 
+  const claudeBin = resolveClaudeBin();
+  // On Windows, route through cmd.exe so PATH .cmd shims and the installer .exe both work.
+  // Direct spawn of bare 'claude' hits the WindowsApps app-execution alias which silently
+  // drops piped stdout.
+  const useShell = process.platform === 'win32';
   const bridge = new CleakBridge({
-    spawn: (cmd, args, opts) => nodeSpawn(cmd, [...args], opts),
+    spawn: (cmd, args, opts) => nodeSpawn(cmd, [...args], { ...opts, shell: useShell }),
     cwd: resolveSdkCwd(),
     env: buildEnv(shim.port),
-    claudeBin: resolveClaudeBin(),
+    claudeBin,
   });
 
   bridge.on('status', (s: BridgeStatus) => {

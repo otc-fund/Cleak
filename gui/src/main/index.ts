@@ -98,10 +98,11 @@ async function createWindow(): Promise<void> {
   }
 
   const claudeBin = resolveClaudeBin();
-  // On Windows, route through cmd.exe so PATH .cmd shims and the installer .exe both work.
-  // Direct spawn of bare 'claude' hits the WindowsApps app-execution alias which silently
-  // drops piped stdout.
-  const useShell = process.platform === 'win32';
+  // Use shell only for .cmd/.bat shims (npm global installs on Windows).
+  // For direct .exe paths, spawn without shell — cmd.exe inherits a console handle
+  // which causes Windows processes to write via WriteConsole() instead of the pipe,
+  // making stdout invisible to Node's data events.
+  const useShell = /\.(cmd|bat)$/i.test(claudeBin);
   const bridge = new CleakBridge({
     spawn: (cmd, args, opts) => nodeSpawn(cmd, [...args], { ...opts, shell: useShell }),
     cwd: resolveSdkCwd(),

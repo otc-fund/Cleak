@@ -57,11 +57,10 @@ export class CleakBridge extends EventEmitter {
   private spawnChild(): void {
     this.splitter = this.makeSplitter();
     this.setStatus({ kind: 'starting' });
-    // --print is intentionally omitted: it enables non-interactive mode which exits after one
-    // response. stream-json input-format requires the process to stay running and read from stdin.
+    // stream-json input-format requires the process to stay running and read from stdin.
+    // --bare is omitted: it suppresses NDJSON frames in stream-json mode on Windows.
     const args = [
       '--verbose',
-      '--bare',
       '--input-format',
       'stream-json',
       '--output-format',

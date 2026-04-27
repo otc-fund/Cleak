@@ -22,15 +22,20 @@ export interface BridgeOptions {
 
 export class CleakBridge extends EventEmitter {
   private child: ChildProcess | null = null;
-  private splitter = new NdjsonSplitter(
-    (v) => this.handleFrame(v),
-    (e) => this.emit('error', { message: `parse error: ${e.line}` }),
-  );
+  private splitter: NdjsonSplitter;
   private stoppedByUs = false;
   private attempt = 0;
 
   constructor(private readonly opts: BridgeOptions) {
     super();
+    this.splitter = this.makeSplitter();
+  }
+
+  private makeSplitter(): NdjsonSplitter {
+    return new NdjsonSplitter(
+      (v) => this.handleFrame(v),
+      (e) => this.emit('error', { message: `parse error: ${e.line}` }),
+    );
   }
 
   start(): void {
@@ -50,6 +55,7 @@ export class CleakBridge extends EventEmitter {
   }
 
   private spawnChild(): void {
+    this.splitter = this.makeSplitter();
     this.setStatus({ kind: 'starting' });
     const args = [
       '--print',

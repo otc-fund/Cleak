@@ -171,7 +171,7 @@ async function proxyStreaming(
       }
     });
     oaiRes.on('end', () => { res.end(); resolve(); });
-    oaiRes.on('error', reject);
+    oaiRes.on('error', (err) => { if (!res.destroyed) res.end(); reject(err); });
   });
 }
 

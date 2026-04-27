@@ -1,5 +1,6 @@
 import { EventEmitter } from 'node:events';
 import { Readable, Writable } from 'node:stream';
+import type { ChildProcess } from 'node:child_process';
 import { describe, expect, it, vi } from 'vitest';
 import { CleakBridge, type SpawnFn } from '../src/main/bridge';
 
@@ -26,7 +27,7 @@ class FakeChild extends EventEmitter {
 }
 
 function makeSpawn(child: FakeChild): SpawnFn {
-  return vi.fn(() => child as never);
+  return vi.fn(() => child as unknown as ChildProcess);
 }
 
 describe('CleakBridge', () => {

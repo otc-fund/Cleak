@@ -1,6 +1,8 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
 import { spawn as nodeSpawn } from 'node:child_process';
-import { resolve } from 'node:path';
+import { resolve, join } from 'node:path';
+import { homedir } from 'node:os';
+import { existsSync } from 'node:fs';
 import { CleakBridge } from './bridge';
 import { IpcChannels } from './ipc';
 import type { BridgeStatus } from './ipc';
@@ -13,9 +15,17 @@ const isDev = !app.isPackaged;
 function resolveClaudeBin(): string {
   const fromEnv = process.env['CLAUDE_BIN'];
   if (fromEnv) return fromEnv;
-  // Default to the explicit Windows binary path. The bare `claude` command on
-  // PATH is a WindowsApps shim that swallows stdout under pipe redirection.
-  return 'C:\\Users\\Administrator\\.local\\bin\\claude.exe';
+  // Try common install locations for the Claude Code CLI
+  const candidates = [
+    join(homedir(), '.local', 'bin', 'claude.exe'),
+    join(homedir(), 'AppData', 'Local', 'Programs', 'claude', 'claude.exe'),
+    'claude', // bare name as last resort (may not work via pipe on Windows)
+  ];
+  for (const c of candidates) {
+    if (!c.includes('*') && (c === 'claude' || existsSync(c))) return c;
+  }
+  console.warn('[cleak-gui] WARNING: claude.exe not found; set CLAUDE_BIN env var. Bridge will fail to start.');
+  return candidates[0]!; // return best guess so bridge can report the error naturally
 }
 
 function resolveSdkCwd(): string {
@@ -62,7 +72,7 @@ async function createWindow(): Promise<void> {
   }
 
   const bridge = new CleakBridge({
-    spawn: nodeSpawn as never,
+    spawn: (cmd, args, opts) => nodeSpawn(cmd, [...args], opts),
     cwd: resolveSdkCwd(),
     env: buildEnv(shim.port),
     claudeBin: resolveClaudeBin(),

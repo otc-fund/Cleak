@@ -1,16 +1,16 @@
-import React from 'react';
-import { ChatView } from './components/ChatView';
-import { MessageInput } from './components/MessageInput';
-import { StatusBar } from './components/StatusBar';
+import React, { useEffect } from 'react';
+import { AppShell } from './components/layout/AppShell';
 import { useBridgeWiring } from './lib/bridge';
+import { useSettings } from './store/settings';
 
 export default function App(): React.ReactElement {
   useBridgeWiring();
-  return (
-    <div className="flex flex-col h-full">
-      <ChatView />
-      <MessageInput />
-      <StatusBar />
-    </div>
-  );
+  const load = useSettings((s) => s.load);
+
+  // Load persisted settings from main process on first render
+  useEffect(() => {
+    void load();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return <AppShell />;
 }

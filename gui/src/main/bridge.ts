@@ -70,6 +70,8 @@ export class CleakBridge extends EventEmitter {
     if (this.opts.bypassPermissions !== false) {
       args.push('--permission-mode', 'bypassPermissions');
     }
+    console.log('[bridge] spawning:', this.opts.claudeBin, args.join(' '));
+    console.log('[bridge] cwd:', this.opts.cwd);
     const child = this.opts.spawn(this.opts.claudeBin, args, {
       cwd: this.opts.cwd,
       env: this.opts.env,
@@ -77,14 +79,24 @@ export class CleakBridge extends EventEmitter {
     });
     this.child = child;
     child.on('error', (err) => {
+      console.error('[bridge] spawn error:', err.message);
       this.emit('error', { message: `spawn error: ${err.message}` });
       this.handleExit(-1);
     });
-    child.stdout?.on('data', (b: Buffer) => this.splitter.feed(b));
-    child.stderr?.on('data', (b: Buffer) =>
-      this.emit('error', { message: `stderr: ${b.toString('utf8')}` }),
-    );
-    child.on('exit', (code) => this.handleExit(code ?? -1));
+    child.stdout?.on('data', (b: Buffer) => {
+      const text = b.toString('utf8');
+      console.log('[bridge] stdout:', text.slice(0, 200));
+      this.splitter.feed(b);
+    });
+    child.stderr?.on('data', (b: Buffer) => {
+      const msg = b.toString('utf8');
+      console.error('[bridge] stderr:', msg);
+      this.emit('error', { message: `stderr: ${msg}` });
+    });
+    child.on('exit', (code, signal) => {
+      console.log('[bridge] exit code:', code, 'signal:', signal);
+      this.handleExit(code ?? -1);
+    });
   }
 
   private handleFrame(value: unknown): void {

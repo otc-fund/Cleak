@@ -47,10 +47,16 @@ export function loadSettings(): AppSettings {
     }
   }
 
+  const VALID_THEMES = ['dark', 'light', 'high-contrast'] as const;
+  const rawTheme = stored.theme;
+  const theme = VALID_THEMES.includes(rawTheme as AppSettings['theme'])
+    ? (rawTheme as AppSettings['theme'])
+    : DEFAULTS.theme;
+
   return {
     baseUrl: stored.baseUrl ?? DEFAULTS.baseUrl,
     model:   stored.model   ?? DEFAULTS.model,
-    theme:   (stored.theme as AppSettings['theme']) ?? DEFAULTS.theme,
+    theme,
     apiKey,
   };
 }

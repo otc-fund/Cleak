@@ -41,7 +41,14 @@ function buildEnv(shimPort: number): NodeJS.ProcessEnv {
 // Wire settings IPC — must be called before any window is created.
 function registerSettingsIpc(): void {
   ipcMain.handle(IpcChannels.loadSettings, (): AppSettings => loadSettings());
-  ipcMain.handle(IpcChannels.saveSettings, (_e, s: AppSettings): void => saveSettings(s));
+  ipcMain.handle(IpcChannels.saveSettings, (_e, s: AppSettings): void => {
+    try {
+      saveSettings(s);
+    } catch (err) {
+      console.error('[cleak-gui] Failed to save settings:', err);
+      throw err; // re-throw so renderer promise rejects and can handle it
+    }
+  });
 }
 
 async function createWindow(): Promise<void> {

@@ -40,17 +40,27 @@ export function SettingsPanel(): React.ReactElement {
   const [showKey, setShowKey] = useState(false);
   const [saved,   setSaved]   = useState(false);
 
+  const savedTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+    };
+  }, []);
+
   // Keep local form in sync when store loads from IPC
   useEffect(() => {
+    if (!settings.loaded) return;
     setBaseUrl(settings.baseUrl);
     setModel(settings.model);
     setApiKey(settings.apiKey);
-  }, [settings.loaded]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [settings.loaded, settings.baseUrl, settings.model, settings.apiKey]);
 
   async function handleSave(): Promise<void> {
     await settings.save({ baseUrl, model, apiKey, theme: uiTheme });
     setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+    savedTimerRef.current = setTimeout(() => setSaved(false), 2000);
   }
 
   function handleThemeChange(t: Theme): void {

@@ -2,5 +2,55 @@
 @tailwind components;
 @tailwind utilities;
 
-html, body, #root { height: 100%; }
-body { background: #0b0b0b; color: #e7e7e7; }
+/* ── Theme tokens ── */
+:root,
+[data-theme="dark"] {
+  --bg-base:      #0b0b0b;
+  --bg-panel:     #141414;
+  --bg-hover:     #1e1e1e;
+  --bg-active:    #252525;
+  --border:       #2a2a2a;
+  --text-primary: #e7e7e7;
+  --text-muted:   #71717a;
+  --text-subtle:  #3f3f46;
+  --accent:       #3b82f6;
+  --accent-fg:    #ffffff;
+  --activity-w:   3rem;
+  --side-w:       16rem;
+  --right-w:      18rem;
+  --status-h:     1.5rem;
+}
+
+[data-theme="light"] {
+  --bg-base:      #ffffff;
+  --bg-panel:     #f4f4f5;
+  --bg-hover:     #e4e4e7;
+  --bg-active:    #d4d4d8;
+  --border:       #d1d5db;
+  --text-primary: #18181b;
+  --text-muted:   #71717a;
+  --text-subtle:  #a1a1aa;
+  --accent:       #2563eb;
+  --accent-fg:    #ffffff;
+}
+
+[data-theme="high-contrast"] {
+  --bg-base:      #000000;
+  --bg-panel:     #111111;
+  --bg-hover:     #222222;
+  --bg-active:    #333333;
+  --border:       #ffffff;
+  --text-primary: #ffffff;
+  --text-muted:   #cccccc;
+  --text-subtle:  #888888;
+  --accent:       #facc15;
+  --accent-fg:    #000000;
+}
+
+html, body, #root { height: 100%; margin: 0; padding: 0; }
+body {
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 13px;
+}

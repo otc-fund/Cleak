@@ -73,6 +73,14 @@ async function createWindow(): Promise<void> {
     },
   });
 
+  // Suppress Electron's "no CSP" warning; dev allows unsafe-eval for Vite HMR.
+  win.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+    const csp = isDev
+      ? "default-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:*"
+      : "default-src 'self'; script-src 'self'";
+    callback({ responseHeaders: { ...details.responseHeaders, 'Content-Security-Policy': [csp] } });
+  });
+
   if (isDev && process.env['ELECTRON_RENDERER_URL']) {
     await win.loadURL(process.env['ELECTRON_RENDERER_URL']);
     win.webContents.openDevTools({ mode: 'detach' });

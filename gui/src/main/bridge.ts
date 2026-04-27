@@ -57,8 +57,9 @@ export class CleakBridge extends EventEmitter {
   private spawnChild(): void {
     this.splitter = this.makeSplitter();
     this.setStatus({ kind: 'starting' });
+    // --print is intentionally omitted: it enables non-interactive mode which exits after one
+    // response. stream-json input-format requires the process to stay running and read from stdin.
     const args = [
-      '--print',
       '--verbose',
       '--bare',
       '--input-format',
@@ -75,6 +76,10 @@ export class CleakBridge extends EventEmitter {
       stdio: 'pipe',
     });
     this.child = child;
+    child.on('error', (err) => {
+      this.emit('error', { message: `spawn error: ${err.message}` });
+      this.handleExit(-1);
+    });
     child.stdout?.on('data', (b: Buffer) => this.splitter.feed(b));
     child.stderr?.on('data', (b: Buffer) =>
       this.emit('error', { message: `stderr: ${b.toString('utf8')}` }),

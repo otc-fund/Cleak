@@ -26,10 +26,11 @@ interface AnthropicRequest {
 }
 
 function buildOpenAIBody(req: AnthropicRequest, model: string): Record<string, unknown> {
+  const effectiveModel = model || 'qwen3.6-plus';
   const messages: { role: string; content: unknown }[] = [];
   if (req.system) messages.push({ role: 'system', content: req.system });
   for (const m of req.messages) messages.push({ role: m.role, content: m.content });
-  const body: Record<string, unknown> = { model, messages };
+  const body: Record<string, unknown> = { model: effectiveModel, messages };
   if (req.max_tokens != null) body['max_tokens'] = req.max_tokens;
   if (req.temperature != null) body['temperature'] = req.temperature;
   if (req.stream) body['stream'] = true;
@@ -47,11 +48,13 @@ function makeRequest(
 ): Promise<http.IncomingMessage> {
   const raw = JSON.stringify(body);
   const u = new URL(`${upstreamBaseUrl}/chat/completions`);
+  const port = u.port ? Number(u.port) : (u.protocol === 'https:' ? 443 : 80);
+  console.log('[shim] → POST', `${u.hostname}:${port}${u.pathname}`);
   return new Promise((resolve, reject) => {
     const req = http.request(
       {
         hostname: u.hostname,
-        port: Number(u.port),
+        port,
         path: u.pathname + u.search,
         method: 'POST',
         headers: {
@@ -80,6 +83,9 @@ async function proxyNonStreaming(
     oaiRes.on('end', resolve);
     oaiRes.on('error', reject);
   });
+  if ((oaiRes.statusCode ?? 200) >= 400) {
+    console.error('[shim] upstream error', oaiRes.statusCode, buf);
+  }
   const oai = JSON.parse(buf) as {
     id?: string;
     choices?: { message?: { content?: string }; finish_reason?: string }[];

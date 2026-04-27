@@ -78,6 +78,23 @@ export class CleakBridge extends EventEmitter {
       stdio: 'pipe',
     });
     this.child = child;
+    console.log('[bridge] child pid:', child.pid);
+
+    // 5-second alive check — if process is silent, try stdin nudge
+    setTimeout(() => {
+      if (this.child === child && child.exitCode === null && !child.killed) {
+        console.warn('[bridge] 5s timeout — process alive but silent; sending stdin nudge');
+        child.stdin?.write('\n');
+      }
+    }, 5000);
+
+    // Initial stdin nudge — some stream-json implementations need a first write
+    setTimeout(() => {
+      if (child.stdin && !child.killed) {
+        child.stdin.write('\n');
+      }
+    }, 500);
+
     child.on('error', (err) => {
       console.error('[bridge] spawn error:', err.message);
       this.emit('error', { message: `spawn error: ${err.message}` });

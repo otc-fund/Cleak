@@ -17,12 +17,12 @@ function resolveClaudeBin(): string {
   const candidates = [
     // Windows installer
     join(homedir(), 'AppData', 'Local', 'Programs', 'claude', 'claude.exe'),
-    // npm global install (Windows creates a .cmd shim — needs shell:true)
+    // npm global — prefer .cmd over bare .exe (.cmd reliably pipes via shell)
     join(homedir(), 'AppData', 'Roaming', 'npm', 'claude.cmd'),
     // Linux/Mac npm global
     join(homedir(), '.local', 'bin', 'claude'),
     join(homedir(), '.local', 'bin', 'claude.exe'),
-    // Last resort: bare name via PATH
+    // Last resort
     'claude',
   ];
   for (const c of candidates) {

@@ -184,6 +184,7 @@ async function proxyStreaming(
 export function createAnthropicShim(cfg: ShimConfig): Promise<ShimHandle> {
   return new Promise((resolve, reject) => {
     const server = http.createServer((req, res) => {
+      console.log('[shim] ←', req.method, req.url);
       if (req.method !== 'POST' || !req.url?.endsWith('/messages')) {
         res.writeHead(404);
         res.end('Not found');

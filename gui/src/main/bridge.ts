@@ -25,6 +25,8 @@ export class CleakBridge extends EventEmitter {
   private splitter: NdjsonSplitter;
   private stoppedByUs = false;
   private attempt = 0;
+  private sessionId: string | undefined;
+  private readyTimeout: NodeJS.Timeout | null = null;
 
   constructor(private readonly opts: BridgeOptions) {
     super();
@@ -45,6 +47,7 @@ export class CleakBridge extends EventEmitter {
 
   stop(): void {
     this.stoppedByUs = true;
+    if (this.readyTimeout) { clearTimeout(this.readyTimeout); this.readyTimeout = null; }
     this.child?.kill();
   }
 
@@ -110,9 +113,18 @@ export class CleakBridge extends EventEmitter {
       this.emit('error', { message: `stderr: ${msg}` });
     });
     child.on('exit', (code, signal) => {
+      if (this.readyTimeout) { clearTimeout(this.readyTimeout); this.readyTimeout = null; }
       console.log('[bridge] exit code:', code, 'signal:', signal);
       this.handleExit(code ?? -1);
     });
+
+    // If no system/init arrives within 3s, transition to connected once we have any valid frame
+    this.readyTimeout = setTimeout(() => {
+      if (this.child !== child || child.exitCode !== null || child.killed) return;
+      if (this.sessionId) return; // already connected
+      console.warn('[bridge] no system/init after 3s, marking running (session_id unknown)');
+      this.setStatus({ kind: 'running', sessionId: undefined, protocolOk: false });
+    }, 3000);
   }
 
   private handleFrame(value: unknown): void {
@@ -126,7 +138,12 @@ export class CleakBridge extends EventEmitter {
     this.emit('frame', frame);
     if (frame.type === 'system' && frame.subtype === 'init') {
       this.attempt = 0;
+      if (this.readyTimeout) { clearTimeout(this.readyTimeout); this.readyTimeout = null; }
       this.setStatus({ kind: 'running', sessionId: frame.session_id, protocolOk: true });
+    }
+    // Capture session_id from any system frame with hook_response subtype
+    if (frame.type === 'system' && frame.subtype?.startsWith('hook_') && frame.session_id) {
+      this.sessionId = frame.session_id;
     }
   }
 

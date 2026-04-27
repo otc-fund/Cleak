@@ -6,6 +6,7 @@ export function useBridgeWiring(): void {
   const ingest = useChat((s) => s.ingestFrame);
   const pushError = useChat((s) => s.pushError);
   useEffect(() => {
+    if (!window.bridge) return; // not running inside Electron (e.g. browser dev preview)
     const offS = window.bridge.onStatus(setStatus);
     const offF = window.bridge.onFrame(ingest);
     const offE = window.bridge.onError((e) => pushError(e.message));

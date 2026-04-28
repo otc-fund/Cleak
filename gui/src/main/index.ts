@@ -2,12 +2,14 @@ import { app, BrowserWindow, ipcMain } from 'electron';
 import { spawn as nodeSpawn } from 'node:child_process';
 import { resolve, join } from 'node:path';
 import { homedir } from 'node:os';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import chokidar from 'chokidar';
 import { CleakBridge } from './bridge';
-import { IpcChannels } from './ipc';
+import { IpcChannels, FileIpcChannels } from './ipc';
 import type { BridgeStatus, AppSettings } from './ipc';
 import type { CleakInboundFrame } from './cleakProtocol';
 import { loadSettings, saveSettings } from './settings';
+import { getFileTree } from './fileTree';
 
 const isDev = !app.isPackaged;
 
@@ -120,7 +122,28 @@ async function createWindow(): Promise<void> {
   });
 
   bridge.start();
-  win.on('closed', () => { bridge.stop(); shim.close(); });
+
+  // File watcher — watch the SDK root for changes
+  const watcher = chokidar.watch(resolveSdkCwd(), {
+    ignored: /(^|[\/\\])(\.git|node_modules|out|dist)/,
+    persistent: true,
+    ignoreInitial: true,
+    depth: 6,
+  });
+  ['add', 'change', 'unlink', 'addDir', 'unlinkDir'].forEach(ev => {
+    watcher.on(ev, (path: string) => {
+      if (!win.isDestroyed()) win.webContents.send(FileIpcChannels.watchEvent, { event: ev, path });
+    });
+  });
+
+  // File IPC handlers
+  ipcMain.handle(FileIpcChannels.listTree, (_e, root: string) => getFileTree(root));
+  ipcMain.handle(FileIpcChannels.readFile, (_e, path: string) => readFileSync(path, 'utf8'));
+  ipcMain.handle(FileIpcChannels.writeFile, (_e, path: string, content: string) => {
+    writeFileSync(path, content, 'utf8');
+  });
+
+  win.on('closed', () => { bridge.stop(); shim.close(); void watcher.close(); });
 }
 
 app.whenReady().then(() => {

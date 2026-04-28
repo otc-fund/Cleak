@@ -29,3 +29,12 @@ export const IpcChannels = {
 } as const;
 
 export type IpcChannel = (typeof IpcChannels)[keyof typeof IpcChannels];
+
+export const FileIpcChannels = {
+  listTree:      'files:listTree',
+  readFile:      'files:readFile',
+  writeFile:     'files:writeFile',
+  watchStart:    'files:watchStart',
+  watchStop:     'files:watchStop',
+  watchEvent:    'files:watchEvent',
+} as const;

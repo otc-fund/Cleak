@@ -45,6 +45,8 @@ export interface SearchState {
   runGlob(pattern: string, cwd: string): Promise<void>;
 }
 
+const MAX_QUICK_OPEN_RESULTS = 30;
+
 export const useSearch = create<SearchState>((set, get) => ({
   grepQuery: '',
   grepGlob: '',
@@ -59,7 +61,7 @@ export const useSearch = create<SearchState>((set, get) => ({
   async runGrep(cwd) {
     const { grepQuery, grepGlob, grepRegex } = get();
     if (!grepQuery) return;
-    set({ grepRunning: true });
+    set({ grepRunning: true, grepResults: [] });
     try {
       const raw = await window.bridge.searchGrep(grepQuery, cwd, {
         glob: grepGlob || undefined,
@@ -90,24 +92,26 @@ export const useSearch = create<SearchState>((set, get) => ({
     set({ quickOpenOpen: open, quickOpenQuery: '', quickOpenMatches: open ? get().quickOpenEntries : [] });
   },
   setQuickOpenQuery(q) {
-    set({ quickOpenQuery: q });
     const { quickOpenFuse, quickOpenEntries } = get();
-    if (quickOpenFuse && q) {
-      const results = quickOpenFuse.search(q).slice(0, 30).map(r => r.item);
-      set({ quickOpenMatches: results });
-    } else {
-      set({ quickOpenMatches: quickOpenEntries.slice(0, 30) });
-    }
+    const matches = quickOpenFuse && q
+      ? quickOpenFuse.search(q).slice(0, MAX_QUICK_OPEN_RESULTS).map(r => r.item)
+      : quickOpenEntries.slice(0, MAX_QUICK_OPEN_RESULTS);
+    set({ quickOpenQuery: q, quickOpenMatches: matches });
   },
   populateQuickOpen(entries) {
     const fuse = new Fuse(entries, { keys: ['label', 'path'], threshold: 0.4 });
-    set({ quickOpenEntries: entries, quickOpenFuse: fuse, quickOpenMatches: entries.slice(0, 30) });
+    set({ quickOpenEntries: entries, quickOpenFuse: fuse, quickOpenMatches: entries.slice(0, MAX_QUICK_OPEN_RESULTS) });
   },
 
   // Glob
   globResults: [],
   async runGlob(pattern, cwd) {
-    const raw = await window.bridge.searchGlob(pattern, cwd) as string[];
-    set({ globResults: raw });
+    try {
+      const raw = await window.bridge.searchGlob(pattern, cwd) as string[];
+      set({ globResults: raw });
+    } catch (err) {
+      console.error('[search:runGlob] Error:', err);
+      set({ globResults: [] });
+    }
   },
 }));

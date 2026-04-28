@@ -75,6 +75,26 @@ interface ChatState {
   pushError(message: string): void;
 }
 
+function extractCost(frame: Record<string, unknown>): CostData {
+  const totalCostUsd = (frame['total_cost_usd'] as number | undefined) ?? 0;
+  const modelUsage = frame['modelUsage'] as Record<string, {
+    input_tokens?: number;
+    output_tokens?: number;
+    cache_read_input_tokens?: number;
+    cache_creation_input_tokens?: number;
+  }> | undefined;
+  const cost: CostData = { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, totalCostUsd };
+  if (modelUsage) {
+    for (const usage of Object.values(modelUsage)) {
+      cost.inputTokens += usage.input_tokens ?? 0;
+      cost.outputTokens += usage.output_tokens ?? 0;
+      cost.cacheReadTokens += usage.cache_read_input_tokens ?? 0;
+      cost.cacheWriteTokens += usage.cache_creation_input_tokens ?? 0;
+    }
+  }
+  return cost;
+}
+
 export const useChat = create<ChatState>((set) => ({
   messages: [],
   status: { kind: 'starting' },
@@ -92,7 +112,6 @@ export const useChat = create<ChatState>((set) => ({
   },
 
   ingestFrame(frame) {
-    console.log('[chat] ingestFrame called, frame type:', frame.type);
     if (frame.type === 'assistant') {
       const blocks = extractBlocks(frame);
       if (blocks.length === 0) return;
@@ -135,58 +154,21 @@ export const useChat = create<ChatState>((set) => ({
       set((s) => {
         const msgs = [...s.messages];
         const tail = msgs[msgs.length - 1];
-        console.log('[chat] result frame received, tail:', tail?.role, tail?.pending, tail?.blocks?.length);
+        const cost = extractCost(frame as any);
 
-        // If no assistant content was streamed, pull text from result frame
-        if (tail && tail.role === 'assistant' && tail.pending && tail.blocks.length === 0) {
+        // If there's a pending assistant message, finalize it
+        if (tail && tail.role === 'assistant' && tail.pending) {
+          const hasText = tail.blocks.some(b => b.type === 'text');
           const resultText = (frame as any).result as string | undefined;
-          console.log('[chat] resultText:', resultText);
-          if (resultText) {
-            const totalCostUsd = (frame as any).total_cost_usd ?? 0;
-            const modelUsage = (frame as any).modelUsage as Record<string, {
-              input_tokens?: number;
-              output_tokens?: number;
-              cache_read_input_tokens?: number;
-              cache_creation_input_tokens?: number;
-            }> | undefined;
-            let cost: CostData = { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, totalCostUsd };
-            if (modelUsage) {
-              for (const usage of Object.values(modelUsage)) {
-                cost.inputTokens += usage.input_tokens ?? 0;
-                cost.outputTokens += usage.output_tokens ?? 0;
-                cost.cacheReadTokens += usage.cache_read_input_tokens ?? 0;
-                cost.cacheWriteTokens += usage.cache_creation_input_tokens ?? 0;
-              }
-            }
+
+          if (resultText && !hasText) {
             msgs[msgs.length - 1] = {
               ...tail,
-              blocks: [{ type: 'text', text: resultText }],
+              blocks: [...tail.blocks, { type: 'text', text: resultText }],
               pending: false,
             };
-            return { messages: msgs, cost };
-          }
-        }
-
-        if (tail && tail.role === 'assistant' && tail.pending) {
-          msgs[msgs.length - 1] = { ...tail, pending: false };
-        }
-
-        // Extract cost from result frame
-        const totalCostUsd = (frame as any).total_cost_usd ?? 0;
-        const modelUsage = (frame as any).modelUsage as Record<string, {
-          input_tokens?: number;
-          output_tokens?: number;
-          cache_read_input_tokens?: number;
-          cache_creation_input_tokens?: number;
-        }> | undefined;
-
-        let cost: CostData = { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, totalCostUsd };
-        if (modelUsage) {
-          for (const usage of Object.values(modelUsage)) {
-            cost.inputTokens += usage.input_tokens ?? 0;
-            cost.outputTokens += usage.output_tokens ?? 0;
-            cost.cacheReadTokens += usage.cache_read_input_tokens ?? 0;
-            cost.cacheWriteTokens += usage.cache_creation_input_tokens ?? 0;
+          } else {
+            msgs[msgs.length - 1] = { ...tail, pending: false };
           }
         }
 

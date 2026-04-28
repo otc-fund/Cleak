@@ -101,7 +101,11 @@ async function createWindow(): Promise<void> {
 
   const claudeBin = resolveClaudeBin();
   const bridge = new CleakBridge({
-    spawn: (cmd, args, opts) => nodeSpawn(cmd, [...args], { ...opts }),
+    spawn: (cmd, args, opts) => {
+      // .cmd/.bat files need shell on Windows for proper pipe handling
+      const shell = cmd.endsWith('.cmd') || cmd.endsWith('.bat');
+      return nodeSpawn(cmd, [...args], { ...opts, shell });
+    },
     cwd: resolveSdkCwd(),
     env: buildEnv(shim.port),
     claudeBin,

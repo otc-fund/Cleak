@@ -47,7 +47,7 @@ export function EditorArea(): React.ReactElement {
     }));
 
     decorationIds.current = ed.deltaDecorations([], newDecorations);
-  }, [activeTabData?.highlights.length, activeTabData?.path]);
+  }, [JSON.stringify(activeTabData?.highlights), activeTabData?.path]);
 
   if (tabs.length === 0) {
     return (

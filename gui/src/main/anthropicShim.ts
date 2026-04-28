@@ -49,7 +49,7 @@ function makeRequest(
   const raw = JSON.stringify(body);
   const u = new URL(`${upstreamBaseUrl}/chat/completions`);
   const port = u.port ? Number(u.port) : (u.protocol === 'https:' ? 443 : 80);
-  console.log('[shim] → POST', `${u.hostname}:${port}${u.pathname}`);
+  console.log('[shim] t=', Date.now(), '→ POST', `${u.hostname}:${port}${u.pathname}`);
   return new Promise((resolve, reject) => {
     const req = http.request(
       {
@@ -63,9 +63,16 @@ function makeRequest(
           authorization: `Bearer ${upstreamApiKey}`,
         },
       },
-      resolve,
+      (res) => {
+        console.log('[shim] t=', Date.now(), '← upstream response', res.statusCode, 'headers:', JSON.stringify(res.headers));
+        resolve(res);
+      },
     );
-    req.on('error', reject);
+    console.log('[shim] t=', Date.now(), 'request sent, waiting for upstream...');
+    req.on('error', (e) => {
+      console.log('[shim] t=', Date.now(), 'request error:', e.message);
+      reject(e);
+    });
     req.write(raw);
     req.end();
   });
@@ -86,9 +93,14 @@ async function proxyStreaming(
   const msgId = `msg_${Date.now()}`;
   let headerSent = false;
   let lineBuf = '';
+  let firstChunkTs: number | null = null;
 
   await new Promise<void>((resolve, reject) => {
     oaiRes.on('data', (chunk: Buffer) => {
+      if (!firstChunkTs) {
+        firstChunkTs = Date.now();
+        console.log('[shim] t=', firstChunkTs, 'first streaming chunk');
+      }
       lineBuf += chunk.toString();
       const lines = lineBuf.split('\n');
       lineBuf = lines.pop() ?? '';
@@ -107,7 +119,7 @@ async function proxyStreaming(
         }
         try {
           const parsed = JSON.parse(payload) as {
-            choices?: { delta?: { role?: string; content?: string }; finish_reason?: string | null }[];
+            choices?: { delta?: { role?: string; content?: string; reasoning_content?: string }; finish_reason?: string | null }[];
           };
           const delta = parsed.choices?.[0]?.delta;
           if (!delta) continue;
@@ -128,16 +140,23 @@ async function proxyStreaming(
             res.write(sseEvent('ping', { type: 'ping' }));
           }
 
-          if (typeof delta.content === 'string' && delta.content.length > 0) {
+          // Some upstreams send reasoning_content instead of content (e.g. Qwen models)
+          const text = delta.content ?? delta.reasoning_content;
+          if (typeof text === 'string' && text.length > 0) {
             res.write(sseEvent('content_block_delta', {
               type: 'content_block_delta', index: 0,
-              delta: { type: 'text_delta', text: delta.content },
+              delta: { type: 'text_delta', text },
             }));
           }
         } catch { /* skip malformed lines */ }
       }
     });
-    oaiRes.on('end', () => { res.end(); resolve(); });
+    oaiRes.on('end', () => {
+      const endTs = Date.now();
+      console.log('[shim] t=', endTs, 'streaming ended');
+      res.end();
+      resolve();
+    });
     oaiRes.on('error', (err) => { if (!res.destroyed) res.end(); reject(err); });
   });
 }
@@ -154,6 +173,7 @@ export function createAnthropicShim(cfg: ShimConfig): Promise<ShimHandle> {
       let body = '';
       req.on('data', (c: Buffer) => (body += c.toString()));
       req.on('end', () => {
+        console.log('[shim] t=', Date.now(), 'request body received, length:', body.length);
         let parsed: AnthropicRequest;
         try { parsed = JSON.parse(body) as AnthropicRequest; }
         catch { res.writeHead(400); res.end('Bad request'); return; }

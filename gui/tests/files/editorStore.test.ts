@@ -24,35 +24,36 @@ describe('useEditor', () => {
     useEditor.getState().openFile('/src/app.ts', 'const x = 1;');
     const { tabs, activeTab } = useEditor.getState();
     expect(tabs.length).toBe(1);
-    expect(tabs[0].path).toBe('/src/app.ts');
-    expect(tabs[0].content).toBe('const x = 1;');
-    expect(tabs[0].savedContent).toBe('const x = 1;');
-    expect(tabs[0].language).toBe('typescript');
+    const tab = tabs[0]!;
+    expect(tab.path).toBe('/src/app.ts');
+    expect(tab.content).toBe('const x = 1;');
+    expect(tab.savedContent).toBe('const x = 1;');
+    expect(tab.language).toBe('typescript');
     expect(activeTab).toBe('/src/app.ts');
   });
 
   it('detects language from path', () => {
     useEditor.getState().openFile('/src/style.css', 'body {}');
-    expect(useEditor.getState().tabs[0].language).toBe('css');
+    expect(useEditor.getState().tabs[0]!.language).toBe('css');
 
     useEditor.getState().openFile('/src/index.py', 'print("hi")');
-    expect(useEditor.getState().tabs[1].language).toBe('python');
+    expect(useEditor.getState().tabs[1]!.language).toBe('python');
 
     useEditor.getState().openFile('/src/unknown.xyz', '???');
-    expect(useEditor.getState().tabs[2].language).toBe('plaintext');
+    expect(useEditor.getState().tabs[2]!.language).toBe('plaintext');
   });
 
   it('re-opens existing file by activating tab only', () => {
     useEditor.getState().openFile('/src/app.ts', 'const x = 1;');
     useEditor.getState().openFile('/src/app.ts', 'const x = 999;');
     expect(useEditor.getState().tabs.length).toBe(1);
-    expect(useEditor.getState().tabs[0].content).toBe('const x = 1;');
+    expect(useEditor.getState().tabs[0]!.content).toBe('const x = 1;');
   });
 
   it('sets content (dirty state)', () => {
     useEditor.getState().openFile('/src/app.ts', 'const x = 1;');
     useEditor.getState().setContent('/src/app.ts', 'const x = 2;');
-    const tab = useEditor.getState().tabs[0];
+    const tab = useEditor.getState().tabs[0]!;
     expect(tab.content).toBe('const x = 2;');
     expect(tab.savedContent).toBe('const x = 1;');
   });
@@ -61,7 +62,7 @@ describe('useEditor', () => {
     useEditor.getState().openFile('/src/app.ts', 'const x = 1;');
     useEditor.getState().setContent('/src/app.ts', 'const x = 2;');
     await useEditor.getState().saveTab('/src/app.ts');
-    const tab = useEditor.getState().tabs[0];
+    const tab = useEditor.getState().tabs[0]!;
     expect(tab.savedContent).toBe('const x = 2;');
     expect((window as any).bridge.writeFile).toHaveBeenCalledWith('/src/app.ts', 'const x = 2;');
   });
@@ -70,7 +71,7 @@ describe('useEditor', () => {
     useEditor.getState().openFile('/src/app.ts', 'const x = 1;');
     useEditor.getState().setContent('/src/app.ts', 'const x = 2;');
     useEditor.getState().discardTab('/src/app.ts');
-    expect(useEditor.getState().tabs[0].content).toBe('const x = 1;');
+    expect(useEditor.getState().tabs[0]!.content).toBe('const x = 1;');
   });
 
   it('closeTab removes tab and activates previous', () => {
@@ -92,10 +93,11 @@ describe('useEditor', () => {
     useEditor.getState().openFile('/src/app.ts', 'const x = 1;');
     useEditor.getState().addHighlight('/src/app.ts', 1, 3, 'read');
     useEditor.getState().addHighlight('/src/app.ts', 5, 8, 'edit');
-    expect(useEditor.getState().tabs[0].highlights.length).toBe(2);
-    expect(useEditor.getState().tabs[0].highlights[0].kind).toBe('read');
+    const tab = useEditor.getState().tabs[0]!;
+    expect(tab.highlights.length).toBe(2);
+    expect(tab.highlights[0]!.kind).toBe('read');
 
     useEditor.getState().clearHighlights('/src/app.ts');
-    expect(useEditor.getState().tabs[0].highlights.length).toBe(0);
+    expect(useEditor.getState().tabs[0]!.highlights.length).toBe(0);
   });
 });

@@ -130,7 +130,7 @@ async function createWindow(): Promise<void> {
     ignoreInitial: true,
     depth: 6,
   });
-  ['add', 'change', 'unlink', 'addDir', 'unlinkDir'].forEach(ev => {
+  (['add', 'change', 'unlink', 'addDir', 'unlinkDir'] as const).forEach(ev => {
     watcher.on(ev, (path: string) => {
       if (!win.isDestroyed()) win.webContents.send(FileIpcChannels.watchEvent, { event: ev, path });
     });

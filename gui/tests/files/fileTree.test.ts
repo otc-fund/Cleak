@@ -48,10 +48,10 @@ describe('getFileTree', () => {
     const tree = await getFileTree('/fake-root');
 
     expect(tree.map(n => n.name)).toEqual(['docs', 'src', 'alpha.ts', 'beta.ts']);
-    expect(tree[0].kind).toBe('dir');
-    expect(tree[1].kind).toBe('dir');
-    expect(tree[2].kind).toBe('file');
-    expect(tree[3].kind).toBe('file');
+    expect(tree[0]!.kind).toBe('dir');
+    expect(tree[1]!.kind).toBe('dir');
+    expect(tree[2]!.kind).toBe('file');
+    expect(tree[3]!.kind).toBe('file');
   });
 
   it('skips node_modules and .git', async () => {

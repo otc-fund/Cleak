@@ -13,6 +13,7 @@ module.exports = {
         muted:   'var(--text-muted)',
         subtle:  'var(--text-subtle)',
         accent:  'var(--accent)',
+        surface: 'var(--bg-panel)',
       },
       width: {
         activity: 'var(--activity-w)',
@@ -24,5 +25,5 @@ module.exports = {
       },
     },
   },
-  plugins: [],
+  plugins: [require('@tailwindcss/typography')],
 };

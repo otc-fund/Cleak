@@ -1,62 +1,107 @@
-// src/renderer/store/chat.ts
 import { create } from 'zustand';
 import type { BridgeStatus } from '../../main/ipc';
 import type { CleakInboundFrame } from '../../main/cleakProtocol';
 
+export type TextBlock = { type: 'text'; text: string };
+export type ThinkingBlock = { type: 'thinking'; thinking: string };
+export type ToolUseBlock = { type: 'tool_use'; id: string; name: string; input: unknown };
+export type ToolResultBlock = { type: 'tool_result'; tool_use_id: string; content: unknown; is_error?: boolean };
+export type ContentBlock = TextBlock | ThinkingBlock | ToolUseBlock | ToolResultBlock;
+
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant' | 'system';
-  text: string;
+  blocks: ContentBlock[];
   pending: boolean;
+  ts: number;
+  sessionId?: string;
 }
 
-interface ChatState {
-  messages: ChatMessage[];
-  status: BridgeStatus;
-  errors: string[];
-  appendUser(text: string): void;
-  ingestFrame(frame: CleakInboundFrame): void;
-  setStatus(s: BridgeStatus): void;
-  pushError(message: string): void;
+export interface CostData {
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
+  cacheWriteTokens: number;
+  totalCostUsd: number;
 }
 
 function nextId(): string {
   return Math.random().toString(36).slice(2);
 }
 
-function extractAssistantText(frame: CleakInboundFrame): string {
-  if (frame.type !== 'assistant') return '';
+function extractBlocks(frame: CleakInboundFrame): ContentBlock[] {
+  if (frame.type !== 'assistant') return [];
   const c = frame.message.content;
-  if (typeof c === 'string') return c;
-  return c
-    .filter((b): b is { type: 'text'; text: string } => b.type === 'text')
-    .map((b) => b.text)
-    .join('');
+  if (typeof c === 'string') return [{ type: 'text', text: c }];
+  if (Array.isArray(c)) {
+    return c.map((block) => {
+      switch (block.type) {
+        case 'text':    return { type: 'text' as const, text: block.text };
+        case 'thinking': return { type: 'thinking' as const, thinking: block.thinking };
+        case 'tool_use': return { type: 'tool_use' as const, id: block.id, name: block.name, input: block.input };
+        case 'tool_result': return { type: 'tool_result' as const, tool_use_id: block.tool_use_id, content: block.content, is_error: block.is_error };
+        default: return { type: 'text' as const, text: JSON.stringify(block) };
+      }
+    });
+  }
+  return [];
+}
+
+function appendBlocks(existing: ContentBlock[], incoming: ContentBlock[]): ContentBlock[] {
+  const result = [...existing];
+  for (const block of incoming) {
+    if (block.type === 'text') {
+      const last = result[result.length - 1];
+      if (last && last.type === 'text') {
+        result[result.length - 1] = { type: 'text', text: last.text + block.text };
+      } else {
+        result.push(block);
+      }
+    } else {
+      result.push(block);
+    }
+  }
+  return result;
+}
+
+interface ChatState {
+  messages: ChatMessage[];
+  status: BridgeStatus;
+  errors: string[];
+  cost: CostData | null;
+  appendUser(text: string): void;
+  ingestFrame(frame: CleakInboundFrame): void;
+  setStatus(s: BridgeStatus): void;
+  pushError(message: string): void;
 }
 
 export const useChat = create<ChatState>((set) => ({
   messages: [],
   status: { kind: 'starting' },
   errors: [],
+  cost: null,
+
   appendUser(text) {
     set((s) => ({
       messages: [
         ...s.messages,
-        { id: nextId(), role: 'user', text, pending: false },
-        { id: nextId(), role: 'assistant', text: '', pending: true },
+        { id: nextId(), role: 'user', blocks: [{ type: 'text', text }], pending: false, ts: Date.now() },
+        { id: nextId(), role: 'assistant', blocks: [], pending: true, ts: Date.now() },
       ],
     }));
   },
+
   ingestFrame(frame) {
     if (frame.type === 'assistant') {
-      const piece = extractAssistantText(frame);
+      const blocks = extractBlocks(frame);
+      if (blocks.length === 0) return;
       set((s) => {
         const msgs = [...s.messages];
         const tail = msgs[msgs.length - 1];
         if (tail && tail.role === 'assistant' && tail.pending) {
-          msgs[msgs.length - 1] = { ...tail, text: tail.text + piece };
+          msgs[msgs.length - 1] = { ...tail, blocks: appendBlocks(tail.blocks, blocks) };
         } else {
-          msgs.push({ id: nextId(), role: 'assistant', text: piece, pending: true });
+          msgs.push({ id: nextId(), role: 'assistant', blocks, pending: true, ts: Date.now(), sessionId: frame.session_id });
         }
         return { messages: msgs };
       });
@@ -67,13 +112,35 @@ export const useChat = create<ChatState>((set) => ({
         if (tail && tail.role === 'assistant' && tail.pending) {
           msgs[msgs.length - 1] = { ...tail, pending: false };
         }
-        return { messages: msgs };
+
+        // Extract cost from result frame
+        const totalCostUsd = (frame as any).total_cost_usd ?? 0;
+        const modelUsage = (frame as any).modelUsage as Record<string, {
+          input_tokens?: number;
+          output_tokens?: number;
+          cache_read_input_tokens?: number;
+          cache_creation_input_tokens?: number;
+        }> | undefined;
+
+        let cost: CostData = { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, totalCostUsd };
+        if (modelUsage) {
+          for (const usage of Object.values(modelUsage)) {
+            cost.inputTokens += usage.input_tokens ?? 0;
+            cost.outputTokens += usage.output_tokens ?? 0;
+            cost.cacheReadTokens += usage.cache_read_input_tokens ?? 0;
+            cost.cacheWriteTokens += usage.cache_creation_input_tokens ?? 0;
+          }
+        }
+
+        return { messages: msgs, cost };
       });
     }
   },
+
   setStatus(status) {
     set({ status });
   },
+
   pushError(message) {
     set((s) => ({ errors: [...s.errors.slice(-19), message] }));
   },

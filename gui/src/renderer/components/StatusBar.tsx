@@ -5,6 +5,7 @@ import { useSettings } from '../store/settings';
 import { useUi } from '../store/ui';
 import type { BridgeStatus } from '../../main/ipc';
 import { cn } from '../lib/cn';
+import { CostMeter } from './chat/CostMeter';
 
 function describeBridgeStatus(s: BridgeStatus): { text: string; dot: string } {
   switch (s.kind) {
@@ -44,8 +45,9 @@ export function StatusBar(): React.ReactElement {
         )}
       </div>
 
-      {/* Right: model + right-panel toggle */}
+      {/* Right: model + cost + right-panel toggle */}
       <div className="flex items-center gap-3 shrink-0 ml-3">
+        <CostMeter />
         <span style={{ color: 'var(--text-subtle)' }}>{model}</span>
         <button
           onClick={() => setRightPanelOpen(!rightPanelOpen)}

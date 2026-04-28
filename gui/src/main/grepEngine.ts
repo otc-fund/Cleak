@@ -16,18 +16,24 @@ export interface GrepOptions {
   maxResults?: number; // cap at ~500 to avoid renderer overload
 }
 
+const DEFAULT_IGNORE = ['**/node_modules/**', '**/.git/**', '**/dist/**'];
+
 export async function runGrep(pattern: string, opts: GrepOptions): Promise<GrepMatch[]> {
   const { cwd, glob: globPat, regex = false, maxResults = 500 } = opts;
 
   const files = await fg(globPat ?? '**/*', {
     cwd,
-    ignore: ['**/node_modules/**', '**/.git/**', '**/dist/**'],
+    ignore: DEFAULT_IGNORE,
     onlyFiles: true,
     absolute: true,
   });
 
   const results: GrepMatch[] = [];
-  const re = regex ? new RegExp(pattern) : null;
+  let re: RegExp | null = null;
+  if (regex) {
+    try { re = new RegExp(pattern); }
+    catch (e: unknown) { throw new Error(`Invalid regex: ${e instanceof Error ? e.message : String(e)}`); }
+  }
 
   for (const file of files) {
     if (results.length >= maxResults) break;
@@ -58,7 +64,7 @@ export async function runGrep(pattern: string, opts: GrepOptions): Promise<GrepM
 export async function runGlob(pattern: string, cwd: string): Promise<string[]> {
   return fg(pattern, {
     cwd,
-    ignore: ['**/node_modules/**', '**/.git/**', '**/dist/**'],
+    ignore: DEFAULT_IGNORE,
     onlyFiles: true,
     absolute: true,
   });

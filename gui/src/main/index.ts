@@ -158,17 +158,20 @@ async function createWindow(): Promise<void> {
   });
 
   // Search IPC handlers
-  const PROJECT_CWD = 'D:\\cleak2';
-
   ipcMain.handle(SearchIpcChannels.grep, async (_e, { pattern, path: cwd, glob, regex }) => {
-    return runGrep(pattern, { cwd: cwd ?? PROJECT_CWD, glob, regex });
+    return runGrep(pattern, { cwd: cwd ?? resolveSdkCwd(), glob, regex });
   });
   ipcMain.handle(SearchIpcChannels.glob, async (_e, { pattern, path: cwd }) => {
-    return runGlob(pattern, cwd ?? PROJECT_CWD);
+    return runGlob(pattern, cwd ?? resolveSdkCwd());
   });
   ipcMain.handle(SearchIpcChannels.readFileLines, async (_e, { filePath, startLine, endLine }) => {
-    const content = fs.readFileSync(filePath, 'utf-8');
-    return content.split(/\r?\n/).slice(startLine - 1, endLine);
+    try {
+      const content = fs.readFileSync(filePath, 'utf-8');
+      return content.split(/\r?\n/).slice(startLine - 1, endLine);
+    } catch (err) {
+      console.error('[search:readFileLines] Error:', err);
+      throw err;
+    }
   });
 
   win.on('closed', () => { bridge.stop(); shim.close(); killAllPtys(); void watcher.close(); });

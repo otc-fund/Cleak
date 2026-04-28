@@ -8,6 +8,7 @@ import { CleakBridge } from './bridge';
 import { IpcChannels, FileIpcChannels } from './ipc';
 import type { BridgeStatus, AppSettings } from './ipc';
 import type { CleakInboundFrame } from './cleakProtocol';
+import { registerPtyIpc, killAllPtys } from './ptyManager';
 import { loadSettings, saveSettings } from './settings';
 import { getFileTree } from './fileTree';
 
@@ -101,11 +102,7 @@ async function createWindow(): Promise<void> {
 
   const claudeBin = resolveClaudeBin();
   const bridge = new CleakBridge({
-    spawn: (cmd, args, opts) => {
-      // .cmd/.bat files need shell on Windows for proper pipe handling
-      const shell = cmd.endsWith('.cmd') || cmd.endsWith('.bat');
-      return nodeSpawn(cmd, [...args], { ...opts, shell });
-    },
+    spawn: (cmd, args, opts) => nodeSpawn(cmd, [...args], { ...opts, shell: true }),
     cwd: resolveSdkCwd(),
     env: buildEnv(shim.port),
     claudeBin,
@@ -115,14 +112,25 @@ async function createWindow(): Promise<void> {
     if (!win.isDestroyed()) win.webContents.send(IpcChannels.status, s);
   });
   bridge.on('frame', (f: CleakInboundFrame) => {
+    if (f.type === 'result') {
+      console.log('[ipc] result frame, result:', (f as any).result);
+      // Also log to renderer devtools for debugging
+      if (!win.isDestroyed()) win.webContents.executeJavaScript(`console.log('[ipc→renderer] result frame, result:', ${(JSON.stringify((f as any).result))})`);
+    }
     if (!win.isDestroyed()) win.webContents.send(IpcChannels.frame, f);
   });
   bridge.on('error', (e: { message: string }) => {
     if (!win.isDestroyed()) win.webContents.send(IpcChannels.error, e);
   });
 
+  // Wire pty IPC
+  registerPtyIpc(win);
+
   ipcMain.on(IpcChannels.sendUserMessage, (_e, text: string) => {
     bridge.sendUserMessage(text);
+  });
+  ipcMain.on(IpcChannels.rendererLog, (_e, ...args: unknown[]) => {
+    console.log('[renderer→main]', ...args.map(a => typeof a === 'string' ? a : JSON.stringify(a)));
   });
 
   bridge.start();
@@ -147,7 +155,7 @@ async function createWindow(): Promise<void> {
     writeFileSync(path, content, 'utf8');
   });
 
-  win.on('closed', () => { bridge.stop(); shim.close(); void watcher.close(); });
+  win.on('closed', () => { bridge.stop(); shim.close(); killAllPtys(); void watcher.close(); });
 }
 
 app.whenReady().then(() => {

@@ -26,6 +26,7 @@ export const IpcChannels = {
   error:            'bridge:error',
   loadSettings:     'settings:load',
   saveSettings:     'settings:save',
+  rendererLog:      'renderer:log',
 } as const;
 
 export type IpcChannel = (typeof IpcChannels)[keyof typeof IpcChannels];
@@ -37,4 +38,13 @@ export const FileIpcChannels = {
   watchStart:    'files:watchStart',
   watchStop:     'files:watchStop',
   watchEvent:    'files:watchEvent',
+} as const;
+
+export const PtyIpcChannels = {
+  create:   'pty:create',
+  input:    'pty:input',
+  resize:   'pty:resize',
+  kill:     'pty:kill',
+  data:     'pty:data',
+  exit:     'pty:exit',
 } as const;

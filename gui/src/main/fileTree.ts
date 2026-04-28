@@ -1,5 +1,5 @@
-import { readdir, stat } from 'node:fs/promises';
-import { join, relative, basename } from 'node:path';
+import { readdir } from 'node:fs/promises';
+import { join, relative } from 'node:path';
 import { existsSync, readFileSync } from 'node:fs';
 import ignore from 'ignore';
 
@@ -12,16 +12,16 @@ export interface TreeNode {
 
 const ALWAYS_IGNORE = ['.git', 'node_modules', 'out', 'dist', '.vite'];
 
-async function buildTree(dir: string, ig: ReturnType<typeof ignore>): Promise<TreeNode[]> {
+async function buildTree(dir: string, root: string, ig: ReturnType<typeof ignore>): Promise<TreeNode[]> {
   const entries = await readdir(dir, { withFileTypes: true });
   const nodes: TreeNode[] = [];
   for (const e of entries) {
     if (ALWAYS_IGNORE.includes(e.name)) continue;
     const abs = join(dir, e.name);
-    const rel = relative(dir, abs);
+    const rel = relative(root, abs);
     if (ig.ignores(rel)) continue;
     if (e.isDirectory()) {
-      const children = await buildTree(abs, ig);
+      const children = await buildTree(abs, root, ig);
       nodes.push({ name: e.name, path: abs, kind: 'dir', children });
     } else {
       nodes.push({ name: e.name, path: abs, kind: 'file' });
@@ -39,5 +39,5 @@ export async function getFileTree(root: string): Promise<TreeNode[]> {
   if (existsSync(gitignorePath)) {
     ig.add(readFileSync(gitignorePath, 'utf8'));
   }
-  return buildTree(root, ig);
+  return buildTree(root, root, ig);
 }

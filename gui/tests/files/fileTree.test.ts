@@ -103,4 +103,36 @@ describe('getFileTree', () => {
     expect(names).toContain('app.ts');
     expect(names).toContain('src');
   });
+
+  it('respects path-scoped .gitignore patterns in subdirectories', async () => {
+    vi.resetModules();
+    mockExistsSync.mockReturnValue(true);
+    mockReadFileSync.mockReturnValue('src/config.json\nbuild/\n');
+    mockIgnores.mockImplementation((rel: string) => {
+      // Handle both forward and backslash path separators (Windows vs Unix)
+      const normalized = rel.replace(/\\/g, '/');
+      return normalized === 'src/config.json' || normalized === 'build';
+    });
+
+    mockReaddir
+      .mockResolvedValueOnce([
+        { name: 'app.ts', isDirectory: () => false },
+        { name: 'src', isDirectory: () => true },
+        { name: 'build', isDirectory: () => true },
+      ])
+      .mockResolvedValueOnce([
+        { name: 'index.ts', isDirectory: () => false },
+        { name: 'config.json', isDirectory: () => false },
+      ]);
+
+    const { getFileTree } = await import('../../src/main/fileTree');
+    const tree = await getFileTree('/fake-root');
+
+    const names = tree.map(n => n.name);
+    expect(names).not.toContain('build');
+    expect(names).toContain('src');
+    const srcNode = tree.find(n => n.name === 'src');
+    expect(srcNode?.children?.map(c => c.name)).toEqual(['index.ts']);
+    expect(srcNode?.children?.some(c => c.name === 'config.json')).toBe(false);
+  });
 });

@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import { IpcChannels, FileIpcChannels, PtyIpcChannels } from '../main/ipc';
+import { IpcChannels, FileIpcChannels, PtyIpcChannels, SearchIpcChannels } from '../main/ipc';
 import type { BridgeStatus, BridgeEventMap, AppSettings } from '../main/ipc';
 import type { CleakInboundFrame } from '../main/cleakProtocol';
 
@@ -68,6 +68,13 @@ const api = {
     ipcRenderer.on(PtyIpcChannels.exit, handler);
     return () => ipcRenderer.off(PtyIpcChannels.exit, handler);
   },
+  // Search IPC
+  searchGrep: (pattern: string, path: string, opts?: { glob?: string; regex?: boolean }) =>
+    ipcRenderer.invoke(SearchIpcChannels.grep, { pattern, path, ...opts }),
+  searchGlob: (pattern: string, path: string) =>
+    ipcRenderer.invoke(SearchIpcChannels.glob, { pattern, path }),
+  searchReadLines: (filePath: string, startLine: number, endLine: number) =>
+    ipcRenderer.invoke(SearchIpcChannels.readFileLines, { filePath, startLine, endLine }),
 };
 
 export type BridgeApi = typeof api;

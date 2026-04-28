@@ -5,12 +5,14 @@ import { homedir } from 'node:os';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import chokidar from 'chokidar';
 import { CleakBridge } from './bridge';
-import { IpcChannels, FileIpcChannels } from './ipc';
+import { IpcChannels, FileIpcChannels, SearchIpcChannels } from './ipc';
 import type { BridgeStatus, AppSettings } from './ipc';
 import type { CleakInboundFrame } from './cleakProtocol';
 import { registerPtyIpc, killAllPtys } from './ptyManager';
 import { loadSettings, saveSettings } from './settings';
 import { getFileTree } from './fileTree';
+import { runGrep, runGlob } from './grepEngine';
+import * as fs from 'fs';
 
 const isDev = !app.isPackaged;
 
@@ -153,6 +155,20 @@ async function createWindow(): Promise<void> {
   ipcMain.handle(FileIpcChannels.readFile, (_e, path: string) => readFileSync(path, 'utf8'));
   ipcMain.handle(FileIpcChannels.writeFile, (_e, path: string, content: string) => {
     writeFileSync(path, content, 'utf8');
+  });
+
+  // Search IPC handlers
+  const PROJECT_CWD = 'D:\\cleak2';
+
+  ipcMain.handle(SearchIpcChannels.grep, async (_e, { pattern, path: cwd, glob, regex }) => {
+    return runGrep(pattern, { cwd: cwd ?? PROJECT_CWD, glob, regex });
+  });
+  ipcMain.handle(SearchIpcChannels.glob, async (_e, { pattern, path: cwd }) => {
+    return runGlob(pattern, cwd ?? PROJECT_CWD);
+  });
+  ipcMain.handle(SearchIpcChannels.readFileLines, async (_e, { filePath, startLine, endLine }) => {
+    const content = fs.readFileSync(filePath, 'utf-8');
+    return content.split(/\r?\n/).slice(startLine - 1, endLine);
   });
 
   win.on('closed', () => { bridge.stop(); shim.close(); killAllPtys(); void watcher.close(); });

@@ -122,7 +122,7 @@ export class CleakBridge extends EventEmitter {
     this.readyTimeout = setTimeout(() => {
       if (this.child !== child || child.exitCode !== null || child.killed) return;
       if (this.sessionId) return; // already connected
-      console.warn('[bridge] no system/init after 3s, marking running (session_id unknown)');
+      console.log('[bridge] no system/init after 3s, marking running (session_id unknown)');
       this.setStatus({ kind: 'running', sessionId: undefined, protocolOk: false });
     }, 3000);
   }

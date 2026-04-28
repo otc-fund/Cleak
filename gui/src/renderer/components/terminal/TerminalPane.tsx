@@ -15,6 +15,7 @@ export function TerminalPane({ id, cwd, isActive }: Props): React.ReactElement {
   const termRef = useRef<Terminal | null>(null);
   const fitRef = useRef<FitAddon | null>(null);
   const startedRef = useRef(false);
+  const fitRef_safe = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     if (startedRef.current || !containerRef.current) return;
@@ -35,9 +36,11 @@ export function TerminalPane({ id, cwd, isActive }: Props): React.ReactElement {
     term.loadAddon(fit);
     term.loadAddon(new WebLinksAddon());
     term.open(containerRef.current);
-    requestAnimationFrame(() => fit.fit());
+    const safeFit = () => { try { fit.fit(); } catch { /* terminal not ready */ } };
+    requestAnimationFrame(safeFit);
     termRef.current = term;
     fitRef.current = fit;
+    fitRef_safe.current = safeFit;
 
     // Subscribe to agent output writes
     const offOutput = useTerminals.getState().onOutput(id, (text) => {
@@ -75,13 +78,13 @@ export function TerminalPane({ id, cwd, isActive }: Props): React.ReactElement {
 
   // Resize when tab becomes active
   useEffect(() => {
-    if (isActive && fitRef.current) fitRef.current.fit();
+    if (isActive) fitRef_safe.current?.();
   }, [isActive]);
 
   // ResizeObserver for container size changes
   useEffect(() => {
     if (!containerRef.current) return;
-    const ro = new ResizeObserver(() => fitRef.current?.fit());
+    const ro = new ResizeObserver(() => fitRef_safe.current?.());
     ro.observe(containerRef.current);
     return () => ro.disconnect();
   }, []);

@@ -48,6 +48,7 @@ describe('useFiles', () => {
     expect(useFiles.getState().error).toBe(null);
     expect(useFiles.getState().root).toBe('/proj');
     expect(useFiles.getState().tree).toEqual(mockTree);
+    expect((window as any).bridge.listTree).toHaveBeenCalledWith('/proj');
   });
 
   it('loadTree on error sets error', async () => {
@@ -59,5 +60,24 @@ describe('useFiles', () => {
 
     expect(useFiles.getState().loading).toBe(false);
     expect(useFiles.getState().error).toContain('ENOENT');
+  });
+
+  it('refreshNode re-loads tree from current root', async () => {
+    const mockTree = [
+      { name: 'src', path: '/proj/src', kind: 'dir' as const, children: [] },
+    ];
+    (window as any).bridge.listTree.mockResolvedValue(mockTree);
+
+    const { useFiles } = await import('../../src/renderer/store/files');
+
+    await useFiles.getState().loadTree('/proj');
+    expect((window as any).bridge.listTree).toHaveBeenLastCalledWith('/proj');
+
+    // Now refresh should call listTree again with the same root
+    useFiles.getState().refreshNode('/proj/src');
+    // loadTree is async, so wait for it
+    await new Promise(r => setTimeout(r, 10));
+
+    expect((window as any).bridge.listTree).toHaveBeenLastCalledWith('/proj');
   });
 });

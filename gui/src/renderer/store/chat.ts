@@ -134,6 +134,36 @@ export const useChat = create<ChatState>((set) => ({
       set((s) => {
         const msgs = [...s.messages];
         const tail = msgs[msgs.length - 1];
+
+        // If no assistant content was streamed, pull text from result frame
+        if (tail && tail.role === 'assistant' && tail.pending && tail.blocks.length === 0) {
+          const resultText = (frame as any).result as string | undefined;
+          if (resultText) {
+            const totalCostUsd = (frame as any).total_cost_usd ?? 0;
+            const modelUsage = (frame as any).modelUsage as Record<string, {
+              input_tokens?: number;
+              output_tokens?: number;
+              cache_read_input_tokens?: number;
+              cache_creation_input_tokens?: number;
+            }> | undefined;
+            let cost: CostData = { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, totalCostUsd };
+            if (modelUsage) {
+              for (const usage of Object.values(modelUsage)) {
+                cost.inputTokens += usage.input_tokens ?? 0;
+                cost.outputTokens += usage.output_tokens ?? 0;
+                cost.cacheReadTokens += usage.cache_read_input_tokens ?? 0;
+                cost.cacheWriteTokens += usage.cache_creation_input_tokens ?? 0;
+              }
+            }
+            msgs[msgs.length - 1] = {
+              ...tail,
+              blocks: [{ type: 'text', text: resultText }],
+              pending: false,
+            };
+            return { messages: msgs, cost };
+          }
+        }
+
         if (tail && tail.role === 'assistant' && tail.pending) {
           msgs[msgs.length - 1] = { ...tail, pending: false };
         }

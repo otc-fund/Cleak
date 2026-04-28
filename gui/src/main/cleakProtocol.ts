@@ -63,7 +63,7 @@ export const ResultFrame = z.object({
   duration_api_ms: z.number().optional(),
   total_cost_usd: z.number().optional(),
   num_turns: z.number().optional(),
-  api_error_status: z.number().optional(),
+  api_error_status: z.number().nullish(),
   terminal_reason: z.string().optional(),
   modelUsage: z.record(z.unknown()).optional(),
   permission_denials: z.array(z.unknown()).optional(),

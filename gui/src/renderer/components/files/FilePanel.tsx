@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react';
 import { useFiles } from '../../store/files';
-import { useEditor } from '../../store/editor';
 import { FileTree } from './FileTree';
 
 const PROJECT_ROOT = 'D:\\cleak2'; // TODO: expose from bridge as cwd

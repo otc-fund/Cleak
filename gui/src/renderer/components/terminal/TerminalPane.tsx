@@ -35,7 +35,7 @@ export function TerminalPane({ id, cwd, isActive }: Props): React.ReactElement {
     term.loadAddon(fit);
     term.loadAddon(new WebLinksAddon());
     term.open(containerRef.current);
-    fit.fit();
+    requestAnimationFrame(() => fit.fit());
     termRef.current = term;
     fitRef.current = fit;
 
@@ -44,26 +44,30 @@ export function TerminalPane({ id, cwd, isActive }: Props): React.ReactElement {
       term.write(text);
     });
 
+    let offData: (() => void) | undefined;
+    let offExit: (() => void) | undefined;
+
     // Spawn pty in main
     void window.bridge.ptyCreate(id, undefined, cwd).then(() => {
       // Data from pty → terminal
-      const offData = window.bridge.onPtyData((tabId, data) => {
+      offData = window.bridge.onPtyData((tabId, data) => {
         if (tabId === id) term.write(data);
       });
       // Terminal input → pty
       term.onData(data => window.bridge.ptyInput(id, data));
       // Pty exit
-      const offExit = window.bridge.onPtyExit((tabId) => {
+      offExit = window.bridge.onPtyExit((tabId) => {
         if (tabId === id) {
           term.writeln('\r\n[Process exited]');
           useTerminals.getState().markDead(id);
         }
       });
-      return () => { offData(); offExit(); };
     });
 
     return () => {
       offOutput();
+      offData?.();
+      offExit?.();
       window.bridge.ptyKill(id);
       term.dispose();
     };

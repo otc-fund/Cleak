@@ -1,6 +1,7 @@
 import React from 'react';
 import { useUi } from '../../store/ui';
 import { SettingsPanel } from '../settings/SettingsPanel';
+import { FilePanel } from '../files/FilePanel';
 
 function PanelPlaceholder({ label }: { label: string }): React.ReactElement {
   return (
@@ -14,7 +15,7 @@ function PanelContent(): React.ReactElement {
   const { activeActivity } = useUi();
   switch (activeActivity) {
     case 'settings': return <SettingsPanel />;
-    case 'files':    return <PanelPlaceholder label="File Explorer" />;
+    case 'files':    return <FilePanel />;
     case 'search':   return <PanelPlaceholder label="Search" />;
     case 'tasks':    return <PanelPlaceholder label="Tasks & Todos" />;
     case 'agents':   return <PanelPlaceholder label="Agents" />;

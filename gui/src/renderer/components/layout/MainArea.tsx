@@ -4,6 +4,7 @@ import { useUi } from '../../store/ui';
 import { ChatView } from '../ChatView';
 import { MessageInput } from '../MessageInput';
 import { EditorArea } from '../editor/EditorArea';
+import { TerminalPanel } from '../terminal/TerminalPanel';
 
 export function MainArea(): React.ReactElement {
   const { activeMainTab, setMainTab } = useUi();
@@ -17,7 +18,7 @@ export function MainArea(): React.ReactElement {
         className="flex shrink-0 border-b"
         style={{ borderColor: 'var(--border)', background: 'var(--bg-panel)' }}
       >
-        {(['chat', 'editor'] as const).map((tab) => (
+        {(['chat', 'editor', 'terminal'] as const).map((tab) => (
           <Tabs.Trigger
             key={tab}
             value={tab}
@@ -28,13 +29,17 @@ export function MainArea(): React.ReactElement {
         ))}
       </Tabs.List>
 
-      <Tabs.Content value="chat" className="flex flex-col flex-1 min-h-0 overflow-hidden hidden data-[state=active]:flex">
+      <Tabs.Content value="chat" className="flex flex-col flex-1 min-w-0 min-h-0 hidden data-[state=active]:flex">
         <ChatView />
         <div className="shrink-0"><MessageInput /></div>
       </Tabs.Content>
 
       <Tabs.Content value="editor" className="flex flex-col flex-1 min-h-0 overflow-hidden hidden data-[state=active]:flex">
         <EditorArea />
+      </Tabs.Content>
+
+      <Tabs.Content value="terminal" className="flex flex-col flex-1 min-h-0 overflow-hidden hidden data-[state=active]:flex">
+        <TerminalPanel />
       </Tabs.Content>
     </Tabs.Root>
   );

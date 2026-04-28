@@ -10,10 +10,10 @@ describe('terminals store', () => {
     const id = useTerminals.getState().createTab('Test');
     const s = useTerminals.getState();
     expect(s.tabs).toHaveLength(1);
-    expect(s.tabs[0].id).toBe(id);
-    expect(s.tabs[0].title).toBe('Test');
-    expect(s.tabs[0].agentOwned).toBe(false);
-    expect(s.tabs[0].alive).toBe(true);
+    expect(s.tabs[0]!.id).toBe(id);
+    expect(s.tabs[0]!.title).toBe('Test');
+    expect(s.tabs[0]!.agentOwned).toBe(false);
+    expect(s.tabs[0]!.alive).toBe(true);
     expect(s.activeId).toBe(id);
   });
 
@@ -32,7 +32,7 @@ describe('terminals store', () => {
 
     useTerminals.getState().removeTab(id1);
     expect(useTerminals.getState().tabs).toHaveLength(1);
-    expect(useTerminals.getState().tabs[0].id).toBe(id2);
+    expect(useTerminals.getState().tabs[0]!.id).toBe(id2);
     expect(useTerminals.getState().activeId).toBe(id2);
 
     // Removing the active tab falls back to the last remaining
@@ -43,15 +43,15 @@ describe('terminals store', () => {
 
   it('setActive clears showBadge', () => {
     const id = useTerminals.getState().createTab('Agent', true);
-    expect(useTerminals.getState().tabs[0].showBadge).toBe(true);
+    expect(useTerminals.getState().tabs[0]!.showBadge).toBe(true);
     useTerminals.getState().setActive(id);
-    expect(useTerminals.getState().tabs[0].showBadge).toBe(false);
+    expect(useTerminals.getState().tabs[0]!.showBadge).toBe(false);
   });
 
   it('markDead sets alive false', () => {
     const id = useTerminals.getState().createTab('Term');
-    expect(useTerminals.getState().tabs[0].alive).toBe(true);
+    expect(useTerminals.getState().tabs[0]!.alive).toBe(true);
     useTerminals.getState().markDead(id);
-    expect(useTerminals.getState().tabs[0].alive).toBe(false);
+    expect(useTerminals.getState().tabs[0]!.alive).toBe(false);
   });
 });

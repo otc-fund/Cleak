@@ -28,12 +28,12 @@ export function MainArea(): React.ReactElement {
         ))}
       </Tabs.List>
 
-      <Tabs.Content value="chat" className="flex flex-col flex-1 min-h-0 overflow-hidden">
+      <Tabs.Content value="chat" className="flex flex-col flex-1 min-h-0 overflow-hidden hidden data-[state=active]:flex">
         <ChatView />
         <div className="shrink-0"><MessageInput /></div>
       </Tabs.Content>
 
-      <Tabs.Content value="editor" className="flex flex-col flex-1 min-h-0">
+      <Tabs.Content value="editor" className="flex flex-col flex-1 min-h-0 overflow-hidden hidden data-[state=active]:flex">
         <EditorArea />
       </Tabs.Content>
     </Tabs.Root>

@@ -1,0 +1,196 @@
+[      34ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-XPR23Y44.js?v=a9ef280a:21548
+[25649959ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-XPR23Y44.js?v=a9ef280a:21548
+[26408177ms] [ERROR] Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem. @ http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-DRWLMN53.js?v=e5c7579e:135
+[26408177ms] [ERROR] Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem. @ http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-DRWLMN53.js?v=e5c7579e:135
+[26408177ms] TypeError: Cannot read properties of null (reading 'useContext')
+    at useContext (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-DRWLMN53.js?v=e5c7579e:1062:29)
+    at useLucideContext (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/lucide-react.js?v=050b0f38:1785:58)
+    at http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/lucide-react.js?v=050b0f38:1796:9
+    at renderWithHooks (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-XPR23Y44.js?v=a9ef280a:11546:26)
+    at updateForwardRef (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-XPR23Y44.js?v=a9ef280a:14323:28)
+    at beginWork (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-XPR23Y44.js?v=a9ef280a:15944:22)
+    at HTMLUnknownElement.callCallback2 (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-XPR23Y44.js?v=a9ef280a:3672:22)
+    at Object.invokeGuardedCallbackDev (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-XPR23Y44.js?v=a9ef280a:3697:24)
+    at invokeGuardedCallback (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-XPR23Y44.js?v=a9ef280a:3731:39)
+    at beginWork$1 (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-XPR23Y44.js?v=a9ef280a:19763:15)
+[26408179ms] [ERROR] Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem. @ http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-DRWLMN53.js?v=e5c7579e:135
+[26408179ms] [ERROR] Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem. @ http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-DRWLMN53.js?v=e5c7579e:135
+[26408179ms] TypeError: Cannot read properties of null (reading 'useContext')
+    at useContext (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-DRWLMN53.js?v=e5c7579e:1062:29)
+    at useLucideContext (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/lucide-react.js?v=050b0f38:1785:58)
+    at http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/lucide-react.js?v=050b0f38:1796:9
+    at renderWithHooks (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-XPR23Y44.js?v=a9ef280a:11546:26)
+    at updateForwardRef (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-XPR23Y44.js?v=a9ef280a:14323:28)
+    at beginWork (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-XPR23Y44.js?v=a9ef280a:15944:22)
+    at HTMLUnknownElement.callCallback2 (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-XPR23Y44.js?v=a9ef280a:3672:22)
+    at Object.invokeGuardedCallbackDev (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-XPR23Y44.js?v=a9ef280a:3697:24)
+    at invokeGuardedCallback (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-XPR23Y44.js?v=a9ef280a:3731:39)
+    at beginWork$1 (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-XPR23Y44.js?v=a9ef280a:19763:15)
+[26408180ms] [ERROR] The above error occurred in the <ForwardRef> component:
+
+    at http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/lucide-react.js?v=050b0f38:1789:6
+    at http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/lucide-react.js?v=050b0f38:1822:8
+    at button
+    at div
+    at div
+    at StatusBar (http://localhost:5173/components/StatusBar.tsx?t=1777281847381:37:18)
+    at div
+    at App (http://localhost:5173/App.tsx?t=1777255430856:24:3)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries. @ http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-XPR23Y44.js?v=a9ef280a:14029
+[26408182ms] TypeError: Cannot read properties of null (reading 'useContext')
+    at useContext (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-DRWLMN53.js?v=e5c7579e:1062:29)
+    at useLucideContext (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/lucide-react.js?v=050b0f38:1785:58)
+    at http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/lucide-react.js?v=050b0f38:1796:9
+    at renderWithHooks (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-XPR23Y44.js?v=a9ef280a:11546:26)
+    at updateForwardRef (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-XPR23Y44.js?v=a9ef280a:14323:28)
+    at beginWork (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-XPR23Y44.js?v=a9ef280a:15944:22)
+    at beginWork$1 (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-XPR23Y44.js?v=a9ef280a:19751:22)
+    at performUnitOfWork (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-XPR23Y44.js?v=a9ef280a:19196:20)
+    at workLoopSync (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-XPR23Y44.js?v=a9ef280a:19135:13)
+    at renderRootSync (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-XPR23Y44.js?v=a9ef280a:19114:15)
+[26408304ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-PJEEZAML.js?v=e5c7579e:21550
+[26531067ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-PJEEZAML.js?v=e5c7579e:21550
+[26631769ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-PJEEZAML.js?v=b61f8830:21550
+[26631789ms] [ERROR] Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem. @ http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-DRWLMN53.js?v=b61f8830:135
+[26631790ms] [ERROR] Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem. @ http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-DRWLMN53.js?v=b61f8830:135
+[26631789ms] TypeError: Cannot read properties of null (reading 'useRef')
+    at Object.useRef (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-DRWLMN53.js?v=b61f8830:1074:29)
+    at TooltipProvider (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=33db062e:2585:35)
+    at renderWithHooks (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-PJEEZAML.js?v=e5c7579e:11548:26)
+    at mountIndeterminateComponent (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-PJEEZAML.js?v=e5c7579e:14926:21)
+    at beginWork (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-PJEEZAML.js?v=e5c7579e:15914:22)
+    at HTMLUnknownElement.callCallback2 (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-PJEEZAML.js?v=e5c7579e:3674:22)
+    at Object.invokeGuardedCallbackDev (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-PJEEZAML.js?v=e5c7579e:3699:24)
+    at invokeGuardedCallback (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-PJEEZAML.js?v=e5c7579e:3733:39)
+    at beginWork$1 (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-PJEEZAML.js?v=e5c7579e:19765:15)
+    at performUnitOfWork (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-PJEEZAML.js?v=e5c7579e:19198:20)
+[26631791ms] [ERROR] Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem. @ http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-DRWLMN53.js?v=b61f8830:135
+[26631791ms] [ERROR] Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem. @ http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-DRWLMN53.js?v=b61f8830:135
+[26631790ms] TypeError: Cannot read properties of null (reading 'useContext')
+    at Object.useContext (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-DRWLMN53.js?v=b61f8830:1062:29)
+    at useDirection (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/@radix-ui_react-tabs.js?v=c963c1a8:103:28)
+    at http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/@radix-ui_react-tabs.js?v=c963c1a8:339:23
+    at renderWithHooks (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-PJEEZAML.js?v=e5c7579e:11548:26)
+    at updateForwardRef (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-PJEEZAML.js?v=e5c7579e:14325:28)
+    at beginWork (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-PJEEZAML.js?v=e5c7579e:15946:22)
+    at HTMLUnknownElement.callCallback2 (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-PJEEZAML.js?v=e5c7579e:3674:22)
+    at Object.invokeGuardedCallbackDev (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-PJEEZAML.js?v=e5c7579e:3699:24)
+    at invokeGuardedCallback (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-PJEEZAML.js?v=e5c7579e:3733:39)
+    at beginWork$1 (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-PJEEZAML.js?v=e5c7579e:19765:15)
+[26631792ms] [ERROR] Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem. @ http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-DRWLMN53.js?v=b61f8830:135
+[26631792ms] [ERROR] Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem. @ http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-DRWLMN53.js?v=b61f8830:135
+[26631792ms] TypeError: Cannot read properties of null (reading 'useRef')
+    at Object.useRef (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-DRWLMN53.js?v=b61f8830:1074:29)
+    at TooltipProvider (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=33db062e:2585:35)
+    at renderWithHooks (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-PJEEZAML.js?v=e5c7579e:11548:26)
+    at mountIndeterminateComponent (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-PJEEZAML.js?v=e5c7579e:14926:21)
+    at beginWork (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-PJEEZAML.js?v=e5c7579e:15914:22)
+    at HTMLUnknownElement.callCallback2 (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-PJEEZAML.js?v=e5c7579e:3674:22)
+    at Object.invokeGuardedCallbackDev (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-PJEEZAML.js?v=e5c7579e:3699:24)
+    at invokeGuardedCallback (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-PJEEZAML.js?v=e5c7579e:3733:39)
+    at beginWork$1 (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-PJEEZAML.js?v=e5c7579e:19765:15)
+    at performUnitOfWork (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-PJEEZAML.js?v=e5c7579e:19198:20)
+[26631793ms] [ERROR] Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem. @ http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-DRWLMN53.js?v=b61f8830:135
+[26631793ms] [ERROR] Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem. @ http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-DRWLMN53.js?v=b61f8830:135
+[26631792ms] TypeError: Cannot read properties of null (reading 'useContext')
+    at Object.useContext (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-DRWLMN53.js?v=b61f8830:1062:29)
+    at useDirection (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/@radix-ui_react-tabs.js?v=c963c1a8:103:28)
+    at http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/@radix-ui_react-tabs.js?v=c963c1a8:339:23
+    at renderWithHooks (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-PJEEZAML.js?v=e5c7579e:11548:26)
+    at updateForwardRef (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-PJEEZAML.js?v=e5c7579e:14325:28)
+    at beginWork (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-PJEEZAML.js?v=e5c7579e:15946:22)
+    at HTMLUnknownElement.callCallback2 (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-PJEEZAML.js?v=e5c7579e:3674:22)
+    at Object.invokeGuardedCallbackDev (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-PJEEZAML.js?v=e5c7579e:3699:24)
+    at invokeGuardedCallback (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-PJEEZAML.js?v=e5c7579e:3733:39)
+    at beginWork$1 (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-PJEEZAML.js?v=e5c7579e:19765:15)
+[26631794ms] [ERROR] The above error occurred in the <TooltipProvider> component:
+
+    at TooltipProvider (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=33db062e:2579:5)
+    at ActivityBar (http://localhost:5173/components/layout/ActivityBar.tsx:43:43)
+    at div
+    at div
+    at AppShell (http://localhost:5173/components/layout/AppShell.tsx:28:17)
+    at App (http://localhost:5173/App.tsx?t=1777282070989:24:3)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries. @ http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-PJEEZAML.js?v=e5c7579e:14031
+[26631794ms] [ERROR] The above error occurred in the <Tabs> component:
+
+    at http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/@radix-ui_react-tabs.js?v=c963c1a8:330:7
+    at MainArea (http://localhost:5173/components/layout/MainArea.tsx:24:41)
+    at div
+    at div
+    at AppShell (http://localhost:5173/components/layout/AppShell.tsx:28:17)
+    at App (http://localhost:5173/App.tsx?t=1777282070989:24:3)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries. @ http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-PJEEZAML.js?v=e5c7579e:14031
+[26631795ms] TypeError: Cannot read properties of null (reading 'useRef')
+    at Object.useRef (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-DRWLMN53.js?v=b61f8830:1074:29)
+    at TooltipProvider (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=33db062e:2585:35)
+    at renderWithHooks (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-PJEEZAML.js?v=e5c7579e:11548:26)
+    at mountIndeterminateComponent (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-PJEEZAML.js?v=e5c7579e:14926:21)
+    at beginWork (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-PJEEZAML.js?v=e5c7579e:15914:22)
+    at beginWork$1 (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-PJEEZAML.js?v=e5c7579e:19753:22)
+    at performUnitOfWork (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-PJEEZAML.js?v=e5c7579e:19198:20)
+    at workLoopSync (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-PJEEZAML.js?v=e5c7579e:19137:13)
+    at renderRootSync (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-PJEEZAML.js?v=e5c7579e:19116:15)
+    at recoverFromConcurrentError (http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-PJEEZAML.js?v=e5c7579e:18736:28)
+[26631916ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-PJEEZAML.js?v=b61f8830:21550
+[33299176ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ http://localhost:5173/:0
+[33787482ms] [LOG] [vite] server connection lost. Polling for restart... @ http://localhost:5173/@vite/client:559
+[33789832ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/:0
+[33793200ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/:0
+[33796551ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/:0
+[33836315ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://localhost:5173/@fs/D:/cleak2/gui/node_modules/.vite/deps/chunk-PJEEZAML.js?v=b61f8830:21550
+[34640512ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ http://localhost:5173/:0

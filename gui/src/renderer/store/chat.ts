@@ -92,6 +92,7 @@ export const useChat = create<ChatState>((set) => ({
   },
 
   ingestFrame(frame) {
+    console.log('[chat] ingestFrame called, frame type:', frame.type);
     if (frame.type === 'assistant') {
       const blocks = extractBlocks(frame);
       if (blocks.length === 0) return;
@@ -134,10 +135,12 @@ export const useChat = create<ChatState>((set) => ({
       set((s) => {
         const msgs = [...s.messages];
         const tail = msgs[msgs.length - 1];
+        console.log('[chat] result frame received, tail:', tail?.role, tail?.pending, tail?.blocks?.length);
 
         // If no assistant content was streamed, pull text from result frame
         if (tail && tail.role === 'assistant' && tail.pending && tail.blocks.length === 0) {
           const resultText = (frame as any).result as string | undefined;
+          console.log('[chat] resultText:', resultText);
           if (resultText) {
             const totalCostUsd = (frame as any).total_cost_usd ?? 0;
             const modelUsage = (frame as any).modelUsage as Record<string, {

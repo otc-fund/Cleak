@@ -61,8 +61,12 @@ export const useEditor = create<EditorState>((set, get) => ({
   async saveTab(path) {
     const tab = get().tabs.find(t => t.path === path);
     if (!tab) return;
-    await window.bridge.writeFile(path, tab.content);
-    set(s => ({ tabs: s.tabs.map(t => t.path === path ? { ...t, savedContent: t.content } : t) }));
+    try {
+      await window.bridge.writeFile(path, tab.content);
+      set(s => ({ tabs: s.tabs.map(t => t.path === path ? { ...t, savedContent: t.content } : t) }));
+    } catch (e) {
+      console.error('[editor] Failed to save', path, e);
+    }
   },
 
   discardTab(path) {

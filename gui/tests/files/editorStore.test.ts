@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach, vi } from 'vitest';
+import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
 import { useEditor } from '../../src/renderer/store/editor';
 
 beforeEach(() => {
@@ -8,6 +8,10 @@ beforeEach(() => {
       writeFile: vi.fn().mockResolvedValue(undefined),
     },
   });
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
 });
 
 describe('useEditor', () => {

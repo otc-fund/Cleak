@@ -69,6 +69,7 @@ interface ChatState {
   status: BridgeStatus;
   errors: string[];
   cost: CostData | null;
+  agentTerminalMap: Map<string, string>;
   appendUser(text: string): void;
   ingestFrame(frame: CleakInboundFrame): void;
   setStatus(s: BridgeStatus): void;
@@ -111,9 +112,18 @@ export const useChat = create<ChatState>((set) => ({
     }));
   },
 
+  // Map tool_use id → terminal id for agent BashTool/PowerShellTool routing
+  agentTerminalMap: new Map<string, string>(),
+
   ingestFrame(frame) {
-    console.log('[chat] ingestFrame called, frame type:', frame.type);
+    const rlog = (...args: unknown[]) => { if (typeof window !== 'undefined' && window.bridge?.rendererLog) window.bridge.rendererLog('[chat]', ...args.map(a => typeof a === 'string' ? a : JSON.stringify(a))); };
+    const raw = frame as any;
+    if (frame.type === 'result') {
+      rlog('result frame, top-level keys:', Object.keys(raw).join(','), 'result:', raw.result);
+    }
     if (frame.type === 'assistant') {
+      const raw2 = frame as any;
+      rlog('assistant frame, content type:', typeof raw2.message?.content, 'preview:', JSON.stringify(raw2.message?.content)?.slice(0, 200));
       const blocks = extractBlocks(frame);
       if (blocks.length === 0) return;
 
@@ -138,6 +148,36 @@ export const useChat = create<ChatState>((set) => ({
               });
             }
           }
+
+          // Route BashTool/PowerShellTool to a named terminal tab
+          if (block.name === 'BashTool' || block.name === 'PowerShellTool') {
+            const input = block.input as Record<string, unknown>;
+            const cmd = (input['command'] ?? '') as string;
+            const title = block.name === 'PowerShellTool' ? 'PS' : 'bash';
+            import('../store/terminals').then(({ useTerminals }) => {
+              const termId = useTerminals.getState().createTab(`${title}: ${cmd.slice(0, 30)}`, true);
+              // Store mapping for when result arrives
+              const state = useChat.getState();
+              state.agentTerminalMap.set(block.id, termId);
+            });
+          }
+        }
+
+        // When tool_result arrives, route output to the terminal
+        if (block.type === 'tool_result') {
+          const state = useChat.getState();
+          const termId = state.agentTerminalMap.get(block.tool_use_id);
+          if (termId) {
+            const output = typeof block.content === 'string'
+              ? block.content
+              : JSON.stringify(block.content);
+            import('../store/terminals').then(({ useTerminals }) => {
+              useTerminals.getState().writeOutput(termId, output);
+              // Also clear the badge when result arrives
+              useTerminals.getState().setActive(termId);
+            });
+            state.agentTerminalMap.delete(block.tool_use_id);
+          }
         }
       }
 
@@ -145,32 +185,45 @@ export const useChat = create<ChatState>((set) => ({
         const msgs = [...s.messages];
         const tail = msgs[msgs.length - 1];
         if (tail && tail.role === 'assistant' && tail.pending) {
-          msgs[msgs.length - 1] = { ...tail, blocks: appendBlocks(tail.blocks, blocks) };
+          const newBlocks = appendBlocks(tail.blocks, blocks);
+          rlog('after append, blocks:', JSON.stringify(newBlocks));
+          msgs[msgs.length - 1] = { ...tail, blocks: newBlocks };
         } else {
           msgs.push({ id: nextId(), role: 'assistant', blocks, pending: true, ts: Date.now(), sessionId: frame.session_id });
+          rlog('new assistant msg, blocks:', JSON.stringify(blocks));
         }
         return { messages: msgs };
       });
     } else if (frame.type === 'result') {
+      rlog('processing result frame');
       set((s) => {
         const msgs = [...s.messages];
         const tail = msgs[msgs.length - 1];
         const cost = extractCost(frame as any);
 
+        const resultText = (frame as any).result as string | undefined;
+        rlog('result tail:', tail?.role, 'pending:', tail?.pending,
+          'blocks:', tail?.blocks?.length, 'resultText:', resultText);
+
         // If there's a pending assistant message, finalize it
         if (tail && tail.role === 'assistant' && tail.pending) {
-          const hasText = tail.blocks.some(b => b.type === 'text');
-          const resultText = (frame as any).result as string | undefined;
-
+          const hasText = tail.blocks.some(b => b.type === 'text' && (b as TextBlock).text.length > 0);
           if (resultText && !hasText) {
+            rlog('appending resultText as text block');
             msgs[msgs.length - 1] = {
               ...tail,
               blocks: [...tail.blocks, { type: 'text', text: resultText }],
               pending: false,
             };
+          } else if (hasText) {
+            rlog('assistant already has text blocks, just finalizing');
+            msgs[msgs.length - 1] = { ...tail, pending: false };
           } else {
+            rlog('no resultText, finalizing empty');
             msgs[msgs.length - 1] = { ...tail, pending: false };
           }
+        } else {
+          rlog('no pending assistant message at tail');
         }
 
         return { messages: msgs, cost };

@@ -107,6 +107,10 @@ async function proxyStreaming(
   let lineBuf = '';
   let firstChunkTs: number | null = null;
 
+  // Track content block state: thinking at index 0, text at index 1
+  let textBlockIndex: number | null = null;
+  let thinkingBlockActive = false;
+
   await new Promise<void>((resolve, reject) => {
     oaiRes.on('data', (chunk: Buffer) => {
       if (!firstChunkTs) {
@@ -120,7 +124,13 @@ async function proxyStreaming(
         if (!line.startsWith('data:')) continue;
         const payload = line.slice(5).trim();
         if (payload === '[DONE]') {
-          res.write(sseEvent('content_block_stop', { type: 'content_block_stop', index: 0 }));
+          // Close any still-open content blocks
+          if (thinkingBlockActive) {
+            res.write(sseEvent('content_block_stop', { type: 'content_block_stop', index: 0 }));
+          }
+          if (textBlockIndex != null) {
+            res.write(sseEvent('content_block_stop', { type: 'content_block_stop', index: textBlockIndex }));
+          }
           res.write(sseEvent('message_delta', {
             type: 'message_delta',
             delta: { stop_reason: 'end_turn', stop_sequence: null },
@@ -146,18 +156,43 @@ async function proxyStreaming(
                 usage: { input_tokens: 0, output_tokens: 0 },
               },
             }));
-            res.write(sseEvent('content_block_start', {
-              type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' },
-            }));
             res.write(sseEvent('ping', { type: 'ping' }));
           }
 
-          // Some upstreams send reasoning_content instead of content (e.g. Qwen models)
-          const text = delta.content ?? delta.reasoning_content;
-          if (typeof text === 'string' && text.length > 0) {
+          // Handle thinking (reasoning_content) vs response text (content)
+          if (typeof delta.reasoning_content === 'string' && delta.reasoning_content.length > 0) {
+            if (!thinkingBlockActive) {
+              res.write(sseEvent('content_block_start', {
+                type: 'content_block_start', index: 0, content_block: { type: 'thinking', thinking: '' },
+              }));
+              thinkingBlockActive = true;
+            }
             res.write(sseEvent('content_block_delta', {
               type: 'content_block_delta', index: 0,
-              delta: { type: 'text_delta', text },
+              delta: { type: 'thinking_delta', thinking: delta.reasoning_content },
+            }));
+          }
+
+          if (typeof delta.content === 'string' && delta.content.length > 0) {
+            // Close thinking block when content starts
+            if (thinkingBlockActive) {
+              res.write(sseEvent('content_block_stop', { type: 'content_block_stop', index: 0 }));
+              thinkingBlockActive = false;
+              textBlockIndex = 1;
+              res.write(sseEvent('content_block_start', {
+                type: 'content_block_start', index: 1, content_block: { type: 'text', text: '' },
+              }));
+            } else if (textBlockIndex == null) {
+              // No thinking was sent, start text block at index 0
+              textBlockIndex = 0;
+              res.write(sseEvent('content_block_start', {
+                type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' },
+              }));
+            }
+
+            res.write(sseEvent('content_block_delta', {
+              type: 'content_block_delta', index: textBlockIndex,
+              delta: { type: 'text_delta', text: delta.content },
             }));
           }
         } catch { /* skip malformed lines */ }

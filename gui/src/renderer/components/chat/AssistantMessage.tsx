@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
-import type { ChatMessage, ToolUseBlock, ToolResultBlock } from '../../store/chat';
-import { ThinkingBlock } from './ThinkingBlock';
+import type { ChatMessage, ToolUseBlock, ToolResultBlock, TextBlock, ThinkingBlock as ThinkingBlockType } from '../../store/chat';
+import { ThinkingRun } from './ThinkingRun';
 import { ToolCallCard } from './ToolCallCard';
 import { MarkdownBody } from './MarkdownBody';
 
@@ -17,34 +17,51 @@ export function AssistantMessage({ message }: Props): React.ReactElement {
     return m;
   }, [message.blocks]);
 
-  const thinkingRun = useMemo(() => {
-    const runs = new Map<number, number>();
-    let run = 0;
-    for (let i = message.blocks.length - 1; i >= 0; i--) {
-      const block = message.blocks[i];
-      if (block && block.type === 'thinking') { run++; runs.set(i, run); }
-      else run = 0;
+  // Build render groups directly (no memo to avoid stale references during streaming)
+  const renderGroups: Array<
+    { type: 'thinking'; blocks: (ThinkingBlockType | ToolUseBlock)[] }
+    | { type: 'text'; block: TextBlock }
+    | { type: 'tool'; blocks: ToolUseBlock[] }
+  > = [];
+  for (const b of message.blocks) {
+    if (b.type === 'tool_result') continue;
+    if (b.type === 'thinking') {
+      const last = renderGroups[renderGroups.length - 1];
+      if (last && last.type === 'thinking') {
+        last.blocks.push(b);
+      } else {
+        renderGroups.push({ type: 'thinking', blocks: [b] });
+      }
+    } else if (b.type === 'tool_use') {
+      const last = renderGroups[renderGroups.length - 1];
+      if (last && last.type === 'thinking') {
+        // Attach tool_use to preceding thinking run
+        last.blocks.push(b);
+      } else if (last && last.type === 'tool') {
+        // Merge consecutive standalone tool blocks
+        last.blocks.push(b);
+      } else {
+        renderGroups.push({ type: 'tool', blocks: [b] });
+      }
+    } else if (b.type === 'text') {
+      renderGroups.push({ type: 'text', block: b as TextBlock });
     }
-    return runs;
-  }, [message.blocks]);
-
-  const renderBlocks = message.blocks.filter((b) => b.type !== 'tool_result');
+  }
 
   return (
-    <div className="group flex flex-col gap-0.5">
-      {renderBlocks.map((block, i) => {
-        if (block.type === 'thinking') {
-          const run = thinkingRun.get(i) ?? 1;
-          return <ThinkingBlock key={i} thinking={block.thinking} forceCollapse={run >= 3} />;
+    <div className="group min-w-0" style={{ width: '100%', maxWidth: '100%' }}>
+      {renderGroups.map((g, i) => {
+        if (g.type === 'thinking') {
+          return <ThinkingRun key={`g-${i}`} blocks={g.blocks} resultMap={resultMap} />;
         }
-        if (block.type === 'tool_use') {
-          const result = resultMap.get(block.id);
-          return <ToolCallCard key={i} toolUse={block as ToolUseBlock} result={result} />;
+        if (g.type === 'tool') {
+          // Multiple consecutive tools → compact inline list; single tool → full card
+          return g.blocks.map((tu, j) => (
+            <ToolCallCard key={`g-${i}-${j}`} toolUse={tu} result={resultMap.get(tu.id)} compact />
+          ));
         }
-        if (block.type === 'text') {
-          return block.text ? <MarkdownBody key={i}>{block.text}</MarkdownBody> : null;
-        }
-        return null;
+        const txt = g.block.text;
+        return txt ? <MarkdownBody key={`g-${i}`}>{txt}</MarkdownBody> : null;
       })}
       {message.pending && (
         <span className="inline-block w-2 h-3.5 bg-accent/60 animate-pulse rounded-sm" />

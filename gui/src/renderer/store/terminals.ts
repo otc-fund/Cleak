@@ -20,10 +20,15 @@ interface TerminalsState {
   markDead(id: string): void;
   /** Write output to a terminal's xterm (used by agent tool_result routing) */
   writeOutput(id: string, text: string): void;
+  /** Subscribe to output writes for a specific terminal id */
+  onOutput(id: string, cb: (text: string) => void): () => void;
 }
 
 let counter = 0;
 function nextTermId(): string { return `term-${++counter}`; }
+
+// Callback registry for agent output routing
+const outputListeners = new Map<string, Set<(text: string) => void>>();
 
 export const useTerminals = create<TerminalsState>((set, get) => ({
   tabs: [],
@@ -39,6 +44,7 @@ export const useTerminals = create<TerminalsState>((set, get) => ({
   },
 
   removeTab(id) {
+    outputListeners.delete(id);
     set(s => {
       const tabs = s.tabs.filter(t => t.id !== id);
       const activeId = s.activeId === id ? (tabs[tabs.length - 1]?.id ?? null) : s.activeId;
@@ -57,7 +63,19 @@ export const useTerminals = create<TerminalsState>((set, get) => ({
     set(s => ({ tabs: s.tabs.map(t => t.id === id ? { ...t, alive: false } : t) }));
   },
 
-  writeOutput(_id, _text) {
-    // Handled by TerminalPane via store subscription
+  writeOutput(id, text) {
+    const listeners = outputListeners.get(id);
+    if (listeners) {
+      for (const cb of listeners) cb(text);
+    }
+  },
+
+  onOutput(id, cb) {
+    if (!outputListeners.has(id)) outputListeners.set(id, new Set());
+    outputListeners.get(id)!.add(cb);
+    return () => {
+      const s = outputListeners.get(id);
+      if (s) { s.delete(cb); if (s.size === 0) outputListeners.delete(id); }
+    };
   },
 }));

@@ -3,24 +3,25 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
 import 'highlight.js/styles/github-dark.css';
-import { cn } from '../../lib/cn';
 
 interface Props {
   children: string;
-  className?: string;
 }
 
-export function MarkdownBody({ children, className }: Props): React.ReactElement {
+export function MarkdownBody({ children }: Props): React.ReactElement {
   return (
-    <div className={cn('prose prose-invert prose-sm max-w-none', className)}>
+    <div style={{ color: '#e5e5e5', fontSize: '14px', lineHeight: '1.6', overflowX: 'hidden' }}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeHighlight]}
         components={{
+          p: ({ children: c, ...props }) => (
+            <p {...props} style={{ color: '#e5e5e5', margin: '0.5em 0' }}>{c}</p>
+          ),
           pre({ children, ...props }) {
             return (
-              <div className="relative group my-2">
-                <pre {...props}>{children}</pre>
+              <div className="relative group my-2" style={{ overflow: 'auto' }}>
+                <pre {...props} style={{ overflow: 'auto' }}>{children}</pre>
                 <CopyButton getText={() => {
                   const code = (children as React.ReactElement)?.props?.children;
                   return typeof code === 'string' ? code : '';
@@ -35,7 +36,9 @@ export function MarkdownBody({ children, className }: Props): React.ReactElement
               : <code className="px-1 py-0.5 rounded bg-panel text-accent text-[0.8em]" {...props}>{children}</code>;
           },
         }}
-      />
+      >
+        {children}
+      </ReactMarkdown>
     </div>
   );
 }

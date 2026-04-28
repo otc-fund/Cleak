@@ -39,6 +39,11 @@ export function TerminalPane({ id, cwd, isActive }: Props): React.ReactElement {
     termRef.current = term;
     fitRef.current = fit;
 
+    // Subscribe to agent output writes
+    const offOutput = useTerminals.getState().onOutput(id, (text) => {
+      term.write(text);
+    });
+
     // Spawn pty in main
     void window.bridge.ptyCreate(id, undefined, cwd).then(() => {
       // Data from pty → terminal
@@ -58,6 +63,7 @@ export function TerminalPane({ id, cwd, isActive }: Props): React.ReactElement {
     });
 
     return () => {
+      offOutput();
       window.bridge.ptyKill(id);
       term.dispose();
     };

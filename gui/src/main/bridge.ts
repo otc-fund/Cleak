@@ -52,7 +52,6 @@ export class CleakBridge extends EventEmitter {
   }
 
   sendUserMessage(text: string): void {
-    console.log('[bridge] sendUserMessage at', Date.now());
     if (!this.child?.stdin) return;
     const frame = buildUserFrame(text);
     this.child.stdin.write(JSON.stringify(frame) + '\n');
@@ -61,92 +60,87 @@ export class CleakBridge extends EventEmitter {
   private spawnChild(): void {
     this.splitter = this.makeSplitter();
     this.setStatus({ kind: 'starting' });
-    // stream-json input-format requires the process to stay running and read from stdin.
-    // --bare is omitted: it suppresses NDJSON frames in stream-json mode on Windows.
     const args = [
       '--verbose',
-      '--input-format',
-      'stream-json',
-      '--output-format',
-      'stream-json',
+      '--input-format', 'stream-json',
+      '--output-format', 'stream-json',
     ];
     if (this.opts.bypassPermissions !== false) {
       args.push('--permission-mode', 'bypassPermissions');
     }
-    console.log('[bridge] spawning:', this.opts.claudeBin, args.join(' '));
-    console.log('[bridge] cwd:', this.opts.cwd);
     const child = this.opts.spawn(this.opts.claudeBin, args, {
       cwd: this.opts.cwd,
       env: this.opts.env,
       stdio: 'pipe',
     });
     this.child = child;
-    console.log('[bridge] child pid:', child.pid);
+
+    // Initial stdin nudge — some stream-json implementations need a first write
+    setTimeout(() => {
+      if (child.stdin && !child.killed) child.stdin.write('\n');
+    }, 500);
 
     // 5-second alive check — if process is silent, try stdin nudge
     setTimeout(() => {
       if (this.child === child && child.exitCode === null && !child.killed) {
-        console.warn('[bridge] 5s timeout — process alive but silent; sending stdin nudge');
         child.stdin?.write('\n');
       }
     }, 5000);
 
-    // Initial stdin nudge — some stream-json implementations need a first write
-    setTimeout(() => {
-      if (child.stdin && !child.killed) {
-        child.stdin.write('\n');
-      }
-    }, 500);
-
     child.on('error', (err) => {
-      console.error('[bridge] spawn error:', err.message);
       this.emit('error', { message: `spawn error: ${err.message}` });
       this.handleExit(-1);
     });
-    child.stdout?.on('data', (b: Buffer) => {
-      const text = b.toString('utf8');
-      console.log('[bridge] stdout:', text.slice(0, 200));
-      this.splitter.feed(b);
-    });
+    child.stdout?.on('data', (b: Buffer) => this.splitter.feed(b));
     child.stderr?.on('data', (b: Buffer) => {
       const msg = b.toString('utf8');
-      console.error('[bridge] stderr:', msg);
+      // Check if stderr contains NDJSON (some implementations write frames to stderr)
+      for (const line of msg.split('\n').filter(l => l.trim().startsWith('{'))) {
+        this.splitter.feed(Buffer.from(line + '\n'));
+      }
       this.emit('error', { message: `stderr: ${msg}` });
     });
     child.on('exit', (code, signal) => {
       if (this.readyTimeout) { clearTimeout(this.readyTimeout); this.readyTimeout = null; }
-      console.log('[bridge] exit code:', code, 'signal:', signal);
       this.handleExit(code ?? -1);
     });
 
-    // If no system/init arrives within 3s, transition to connected once we have any valid frame
+    // Fallback: if no system/init arrives within 3s, transition to running
     this.readyTimeout = setTimeout(() => {
       if (this.child !== child || child.exitCode !== null || child.killed) return;
       if (this.sessionId) return; // already connected
-      console.log('[bridge] no system/init after 3s, marking running (session_id unknown)');
       this.setStatus({ kind: 'running', sessionId: undefined, protocolOk: false });
     }, 3000);
   }
 
   private handleFrame(value: unknown): void {
     const parsed = CleakInboundFrame.safeParse(value);
-    console.log('[bridge] frame parse result:', parsed.success ? 'ok' : parsed.error.message);
     if (!parsed.success) {
       this.emit('error', { message: `unrecognized frame: ${parsed.error.message}` });
       this.setStatus({ kind: 'running', sessionId: undefined, protocolOk: false });
       return;
     }
     const frame = parsed.data;
-    console.log('[bridge] frame type:', frame.type, 'subtype:', (frame as any).subtype, 'hasResult:', 'result' in (frame as any));
+    if (frame.type === 'result') {
+      const raw = value as Record<string, unknown>;
+      console.log('[bridge] result frame - parsed has result:', 'result' in frame,
+        'raw.result:', raw['result'],
+        'parsed result:', (frame as any).result);
+    }
     this.emit('frame', frame);
+
     if (frame.type === 'system' && frame.subtype === 'init') {
       this.attempt = 0;
       if (this.readyTimeout) { clearTimeout(this.readyTimeout); this.readyTimeout = null; }
       this.setStatus({ kind: 'running', sessionId: frame.session_id, protocolOk: true });
     }
-    // Capture session_id from any system frame with hook_response subtype
-    if (frame.type === 'system' && frame.subtype?.startsWith('hook_') && frame.session_id) {
-      this.sessionId = frame.session_id;
+    // Capture session_id from hook frames and transition to running (init frame may never arrive)
+    if (frame.type === 'system' && frame.subtype?.startsWith('hook_')) {
+      if (frame.session_id) this.sessionId = frame.session_id;
+      if (this.attempt === 0) {
+        if (this.readyTimeout) { clearTimeout(this.readyTimeout); this.readyTimeout = null; }
+        this.setStatus({ kind: 'running', sessionId: this.sessionId, protocolOk: true });
+      }
     }
   }
 

@@ -70,12 +70,19 @@ describe('anthropicShim', () => {
       req.on('data', (c: Buffer) => (buf += c.toString()));
       req.on('end', () => {
         captured = JSON.parse(buf);
-        res.writeHead(200, { 'content-type': 'application/json' });
-        res.end(JSON.stringify({
+        // Shim now always uses streaming proxy, so fake upstream must return SSE
+        res.writeHead(200, { 'content-type': 'text/event-stream' });
+        res.write(`data: ${JSON.stringify({
           id: 'chatcmpl-1',
-          choices: [{ index: 0, message: { role: 'assistant', content: 'pong' }, finish_reason: 'stop' }],
+          choices: [{ index: 0, delta: { role: 'assistant', content: 'pong' }, finish_reason: null }],
+          usage: null,
+        })}\n\n`);
+        res.write(`data: ${JSON.stringify({
+          choices: [{ index: 0, delta: {}, finish_reason: 'stop' }],
           usage: { prompt_tokens: 5, completion_tokens: 3, total_tokens: 8 },
-        }));
+        })}\n\n`);
+        res.write('data: [DONE]\n\n');
+        res.end();
       });
     });
 
@@ -86,15 +93,23 @@ describe('anthropicShim', () => {
     });
 
     try {
-      const { json } = await postJson(`http://127.0.0.1:${shim.port}/v1/messages`, {
+      const lines = await collectSse(`http://127.0.0.1:${shim.port}/v1/messages`, {
         model: 'claude-3-5-sonnet',
         max_tokens: 100,
         messages: [{ role: 'user', content: 'ping' }],
       });
       expect((captured as { model: string }).model).toBe('gpt-test');
-      expect((json as { type: string }).type).toBe('message');
-      const content = (json as { content: { type: string; text: string }[] }).content;
-      expect(content[0]!.text).toBe('pong');
+      const eventLines = lines.filter((l) => l.startsWith('event:'));
+      expect(eventLines).toContain('event: message_start');
+      expect(eventLines).toContain('event: content_block_delta');
+      expect(eventLines).toContain('event: content_block_stop');
+      expect(eventLines).toContain('event: message_stop');
+      const dataLines = lines.filter((l) => l.startsWith('data:'));
+      const deltas = dataLines
+        .map((l) => { try { return JSON.parse(l.slice(5)); } catch { return null; } })
+        .filter((d) => d?.type === 'content_block_delta');
+      const text = (deltas as { delta: { text: string } }[]).map((d) => d.delta.text).join('');
+      expect(text).toBe('pong');
     } finally {
       shim.close();
       await fake.close();
@@ -153,11 +168,18 @@ describe('anthropicShim', () => {
       req.on('data', (c: Buffer) => (buf += c.toString()));
       req.on('end', () => {
         capturedMessages = (JSON.parse(buf) as { messages: unknown[] }).messages;
-        res.writeHead(200, { 'content-type': 'application/json' });
-        res.end(JSON.stringify({
-          choices: [{ message: { role: 'assistant', content: 'ok' }, finish_reason: 'stop' }],
+        // Shim now always uses streaming proxy
+        res.writeHead(200, { 'content-type': 'text/event-stream' });
+        res.write(`data: ${JSON.stringify({
+          choices: [{ index: 0, delta: { role: 'assistant', content: 'ok' }, finish_reason: null }],
+          usage: null,
+        })}\n\n`);
+        res.write(`data: ${JSON.stringify({
+          choices: [{ index: 0, delta: {}, finish_reason: 'stop' }],
           usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
-        }));
+        })}\n\n`);
+        res.write('data: [DONE]\n\n');
+        res.end();
       });
     });
 
@@ -167,7 +189,7 @@ describe('anthropicShim', () => {
       model: 'm',
     });
     try {
-      await postJson(`http://127.0.0.1:${shim.port}/v1/messages`, {
+      await collectSse(`http://127.0.0.1:${shim.port}/v1/messages`, {
         model: 'x',
         max_tokens: 10,
         system: 'You are a bot.',

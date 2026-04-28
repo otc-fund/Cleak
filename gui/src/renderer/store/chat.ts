@@ -112,6 +112,7 @@ export const useChat = create<ChatState>((set) => ({
   },
 
   ingestFrame(frame) {
+    console.log('[chat] ingestFrame called, frame type:', frame.type);
     if (frame.type === 'assistant') {
       const blocks = extractBlocks(frame);
       if (blocks.length === 0) return;

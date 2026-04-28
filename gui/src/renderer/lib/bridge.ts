@@ -8,7 +8,10 @@ export function useBridgeWiring(): void {
   useEffect(() => {
     if (!window.bridge) return; // not running inside Electron (e.g. browser dev preview)
     const offS = window.bridge.onStatus(setStatus);
-    const offF = window.bridge.onFrame(ingest);
+    const offF = window.bridge.onFrame((f) => {
+      console.log('[renderer] onFrame received, type:', f.type);
+      ingest(f);
+    });
     const offE = window.bridge.onError((e) => pushError(e.message));
     return () => {
       offS();

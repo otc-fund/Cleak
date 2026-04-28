@@ -130,12 +130,14 @@ export class CleakBridge extends EventEmitter {
 
   private handleFrame(value: unknown): void {
     const parsed = CleakInboundFrame.safeParse(value);
+    console.log('[bridge] frame parse result:', parsed.success ? 'ok' : parsed.error.message);
     if (!parsed.success) {
       this.emit('error', { message: `unrecognized frame: ${parsed.error.message}` });
       this.setStatus({ kind: 'running', sessionId: undefined, protocolOk: false });
       return;
     }
     const frame = parsed.data;
+    console.log('[bridge] frame type:', frame.type, 'subtype:', (frame as any).subtype, 'hasResult:', 'result' in (frame as any));
     this.emit('frame', frame);
     if (frame.type === 'system' && frame.subtype === 'init') {
       this.attempt = 0;

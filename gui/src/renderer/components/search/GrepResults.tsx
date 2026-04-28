@@ -1,6 +1,6 @@
 import React from 'react';
 import { FileText, ChevronDown, ChevronRight } from 'lucide-react';
-import { useSearch, type GrepMatch } from '../../store/search';
+import { useSearch, type GrepMatch, type SearchResultGroup } from '../../store/search';
 import { useUi } from '../../store/ui';
 import { useEditor } from '../../store/editor';
 
@@ -20,7 +20,7 @@ export function GrepResults(): React.ReactElement {
   );
 }
 
-function FileGroup({ group }: { group: { file: string; matches: GrepMatch[] } }): React.ReactElement {
+function FileGroup({ group }: { group: SearchResultGroup }): React.ReactElement {
   const [expanded, setExpanded] = React.useState(true);
 
   const basename = group.file.replace(/^.*[/\\]/, '');
@@ -37,7 +37,7 @@ function FileGroup({ group }: { group: { file: string; matches: GrepMatch[] } })
         <span className="text-muted ml-auto">{group.matches.length}</span>
       </button>
       {expanded && group.matches.map(m => (
-        <MatchRow key={`${m.line}-${m.column}`} match={m} />
+        <MatchRow key={`${m.file}:${m.line}:${m.column}`} match={m} />
       ))}
     </div>
   );

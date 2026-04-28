@@ -1,11 +1,11 @@
-import React, { useCallback } from 'react';
+import React from 'react';
 import Editor, { type OnMount } from '@monaco-editor/react';
 import { useEditor } from '../../store/editor';
 import { EditorTab } from './EditorTab';
 import { useUi } from '../../store/ui';
 
 export function EditorArea(): React.ReactElement {
-  const { tabs, activeTab, closeTab, setContent, saveTab, discardTab } = useEditor();
+  const { tabs, activeTab, closeTab, setContent, saveTab } = useEditor();
   const { theme } = useUi();
   const monacoTheme = theme === 'light' ? 'vs' : 'vs-dark';
 

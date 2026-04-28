@@ -3,6 +3,7 @@ import { PanelRight } from 'lucide-react';
 import { useChat } from '../store/chat';
 import { useSettings } from '../store/settings';
 import { useUi } from '../store/ui';
+import { useTerminals } from '../store/terminals';
 import type { BridgeStatus } from '../../main/ipc';
 import { cn } from '../lib/cn';
 import { CostMeter } from './chat/CostMeter';
@@ -20,7 +21,9 @@ export function StatusBar(): React.ReactElement {
   const status = useChat((s) => s.status);
   const model  = useSettings((s) => s.model);
   const lastError = useChat((s) => s.errors[s.errors.length - 1]);
-  const { rightPanelOpen, setRightPanelOpen } = useUi();
+  const { rightPanelOpen, setRightPanelOpen, setMainTab } = useUi();
+  const bgTabs = useTerminals(s => s.tabs.filter(t => t.agentOwned && t.showBadge && t.alive));
+  const setTermActive = useTerminals(s => s.setActive);
 
   const { text, dot } = describeBridgeStatus(status);
 
@@ -43,6 +46,17 @@ export function StatusBar(): React.ReactElement {
             ⚠ {lastError}
           </span>
         )}
+        {bgTabs.map(t => (
+          <button
+            key={t.id}
+            className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-accent/20 text-accent hover:bg-accent/30 transition-colors shrink-0"
+            onClick={() => { setMainTab('terminal'); setTermActive(t.id); }}
+            title={t.title}
+          >
+            <span className="animate-pulse w-1.5 h-1.5 rounded-full bg-accent" />
+            {t.title}
+          </button>
+        ))}
       </div>
 
       {/* Right: model + cost + right-panel toggle */}

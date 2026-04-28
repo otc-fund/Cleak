@@ -2,6 +2,7 @@ import React from 'react';
 import { useUi } from '../../store/ui';
 import { SettingsPanel } from '../settings/SettingsPanel';
 import { FilePanel } from '../files/FilePanel';
+import { ProcessList } from '../terminal/ProcessList';
 
 function PanelPlaceholder({ label }: { label: string }): React.ReactElement {
   return (
@@ -17,6 +18,7 @@ function PanelContent(): React.ReactElement {
     case 'settings': return <SettingsPanel />;
     case 'files':    return <FilePanel />;
     case 'search':   return <PanelPlaceholder label="Search" />;
+    case 'processes': return <ProcessList />;
     case 'tasks':    return <PanelPlaceholder label="Tasks & Todos" />;
     case 'agents':   return <PanelPlaceholder label="Agents" />;
     case 'mcp':      return <PanelPlaceholder label="MCP Servers" />;

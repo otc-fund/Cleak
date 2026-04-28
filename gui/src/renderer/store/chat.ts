@@ -95,6 +95,31 @@ export const useChat = create<ChatState>((set) => ({
     if (frame.type === 'assistant') {
       const blocks = extractBlocks(frame);
       if (blocks.length === 0) return;
+
+      // Emit highlights for file-related tool calls
+      const FILE_TOOLS: Record<string, 'read' | 'edit'> = {
+        FileReadTool: 'read',
+        FileEditTool: 'edit',
+        FileWriteTool: 'edit',
+        PatchApplyTool: 'edit',
+      };
+      for (const block of blocks) {
+        if (block.type === 'tool_use') {
+          const kind = FILE_TOOLS[block.name];
+          if (kind) {
+            const input = block.input as Record<string, unknown>;
+            const filePath = (input['file_path'] ?? input['path']) as string | undefined;
+            const startLine = (input['start_line'] ?? 1) as number;
+            const endLine = (input['end_line'] ?? startLine) as number;
+            if (filePath) {
+              import('../store/editor').then(({ useEditor }) => {
+                useEditor.getState().addHighlight(filePath, startLine, endLine, kind);
+              });
+            }
+          }
+        }
+      }
+
       set((s) => {
         const msgs = [...s.messages];
         const tail = msgs[msgs.length - 1];

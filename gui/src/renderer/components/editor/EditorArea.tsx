@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import Editor, { type OnMount } from '@monaco-editor/react';
+import type { editor, Range } from 'monaco-editor';
 import { useEditor } from '../../store/editor';
 import { EditorTab } from './EditorTab';
 import { useUi } from '../../store/ui';
@@ -10,13 +11,43 @@ export function EditorArea(): React.ReactElement {
   const monacoTheme = theme === 'light' ? 'vs' : 'vs-dark';
 
   const activeTabData = tabs.find(t => t.path === activeTab);
+  const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
+  const RangeRef = useRef<typeof Range | null>(null);
+  const decorationIds = useRef<string[]>([]);
 
   const handleMount: OnMount = (editor, monaco) => {
+    editorRef.current = editor;
+    RangeRef.current = monaco.Range;
     // Ctrl+S to save
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
       if (activeTab) void saveTab(activeTab);
     });
   };
+
+  // Apply highlight decorations when the active tab's highlights change
+  useEffect(() => {
+    const ed = editorRef.current;
+    const R = RangeRef.current;
+    if (!ed || !R || !activeTabData) return;
+
+    // Clear previous decorations
+    if (decorationIds.current.length > 0) {
+      decorationIds.current = ed.deltaDecorations(decorationIds.current, []);
+    }
+
+    const newDecorations: editor.IModelDeltaDecoration[] = activeTabData.highlights.map(h => ({
+      range: new R(h.startLine, 1, h.endLine, 1),
+      options: {
+        isWholeLine: true,
+        className: h.kind === 'edit' ? 'bg-amber-500/10' : 'bg-blue-500/10',
+        glyphMarginClassName: h.kind === 'edit'
+          ? 'codicon codicon-pencil bg-amber-500/20'
+          : 'codicon codicon-info bg-blue-500/20',
+      },
+    }));
+
+    decorationIds.current = ed.deltaDecorations([], newDecorations);
+  }, [activeTabData?.highlights.length, activeTabData?.path]);
 
   if (tabs.length === 0) {
     return (

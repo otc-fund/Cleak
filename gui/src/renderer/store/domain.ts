@@ -1,13 +1,5 @@
 import { create } from 'zustand';
 
-// ── Files (S4) ──────────────────────────────────────────────────────
-interface FilesState {
-  cwd: string;
-}
-export const useFiles = create<FilesState>(() => ({
-  cwd: '',
-}));
-
 // ── Todos (S7) ──────────────────────────────────────────────────────
 interface TodosState {
   count: number;

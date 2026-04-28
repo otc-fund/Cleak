@@ -1,4 +1,14 @@
 import http from 'node:http';
+import { appendFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+
+const shimLogPath = join(tmpdir(), 'cleak-shim.log');
+function shimLog(msg: string) {
+  const line = `[${new Date().toISOString()}] ${msg}\n`;
+  appendFileSync(shimLogPath, line);
+  console.log(msg);
+}
 
 export interface ShimConfig {
   upstreamBaseUrl: string;
@@ -50,6 +60,7 @@ function makeRequest(
   const u = new URL(`${upstreamBaseUrl}/chat/completions`);
   const port = u.port ? Number(u.port) : (u.protocol === 'https:' ? 443 : 80);
   console.log('[shim] t=', Date.now(), '→ POST', `${u.hostname}:${port}${u.pathname}`);
+  shimLog(`t=${Date.now()} → POST ${u.hostname}:${port}${u.pathname} model=${body.model} stream=${body.stream}`);
   return new Promise((resolve, reject) => {
     const req = http.request(
       {
@@ -64,17 +75,18 @@ function makeRequest(
         },
       },
       (res) => {
-        console.log('[shim] t=', Date.now(), '← upstream response', res.statusCode, 'headers:', JSON.stringify(res.headers));
+        const t = Date.now();
+        shimLog(`t=${t} ← upstream ${res.statusCode} ct=${res.headers['content-type']} transfer-encoding=${res.headers['transfer-encoding']}`);
         resolve(res);
       },
     );
-    console.log('[shim] t=', Date.now(), 'request sent, waiting for upstream...');
     req.on('error', (e) => {
-      console.log('[shim] t=', Date.now(), 'request error:', e.message);
+      shimLog(`t=${Date.now()} request error: ${e.message}`);
       reject(e);
     });
     req.write(raw);
     req.end();
+    shimLog(`t=${Date.now()} request sent`);
   });
 }
 
@@ -99,7 +111,7 @@ async function proxyStreaming(
     oaiRes.on('data', (chunk: Buffer) => {
       if (!firstChunkTs) {
         firstChunkTs = Date.now();
-        console.log('[shim] t=', firstChunkTs, 'first streaming chunk');
+        shimLog(`t=${firstChunkTs} first streaming chunk`);
       }
       lineBuf += chunk.toString();
       const lines = lineBuf.split('\n');
@@ -153,7 +165,7 @@ async function proxyStreaming(
     });
     oaiRes.on('end', () => {
       const endTs = Date.now();
-      console.log('[shim] t=', endTs, 'streaming ended');
+      shimLog(`t=${endTs} streaming ended (delta: ${firstChunkTs ? endTs - firstChunkTs : '?'}ms)`);
       res.end();
       resolve();
     });
@@ -173,7 +185,7 @@ export function createAnthropicShim(cfg: ShimConfig): Promise<ShimHandle> {
       let body = '';
       req.on('data', (c: Buffer) => (body += c.toString()));
       req.on('end', () => {
-        console.log('[shim] t=', Date.now(), 'request body received, length:', body.length);
+        shimLog(`t=${Date.now()} request body received, len=${body.length}`);
         let parsed: AnthropicRequest;
         try { parsed = JSON.parse(body) as AnthropicRequest; }
         catch { res.writeHead(400); res.end('Bad request'); return; }

@@ -52,6 +52,7 @@ export class CleakBridge extends EventEmitter {
   }
 
   sendUserMessage(text: string): void {
+    console.log('[bridge] sendUserMessage at', Date.now());
     if (!this.child?.stdin) return;
     const frame = buildUserFrame(text);
     this.child.stdin.write(JSON.stringify(frame) + '\n');

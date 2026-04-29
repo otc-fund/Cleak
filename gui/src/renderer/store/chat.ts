@@ -244,10 +244,6 @@ export const useChat = create<ChatState>((set) => ({
               if (todos) {
                 import('../store/todos').then(({ useTodos }) => {
                   useTodos.getState().setTodos(todos as import('../store/todos').Todo[]);
-                  // Auto-open right panel to show todos
-                  import('../store/ui').then(({ useUi }) => {
-                    useUi.getState().setRightPanelOpen(true);
-                  });
                 });
               }
             } catch { /* ignore parse errors */ }

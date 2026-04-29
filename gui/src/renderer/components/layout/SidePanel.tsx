@@ -4,6 +4,13 @@ import { SettingsPanel } from '../settings/SettingsPanel';
 import { FilePanel } from '../files/FilePanel';
 import { ProcessList } from '../terminal/ProcessList';
 import { GrepPanel } from '../search/GrepPanel';
+import { TodoPanel } from '../todos/TodoPanel';
+import { TaskPanel } from '../tasks/TaskPanel';
+import { TaskOutput } from '../tasks/TaskOutput';
+import { AgentDashboard } from '../agents/AgentDashboard';
+import { AgentChat } from '../agents/AgentChat';
+import { useTasks } from '../../store/tasks';
+import { useAgents } from '../../store/agents';
 
 function PanelPlaceholder({ label }: { label: string }): React.ReactElement {
   return (
@@ -15,13 +22,15 @@ function PanelPlaceholder({ label }: { label: string }): React.ReactElement {
 
 function PanelContent(): React.ReactElement {
   const { activeActivity } = useUi();
+  const { tasks, activeTaskId } = useTasks();
+  const { activeAgentId } = useAgents();
   switch (activeActivity) {
     case 'settings': return <SettingsPanel />;
     case 'files':    return <FilePanel />;
     case 'search':   return <GrepPanel />;
     case 'processes': return <ProcessList />;
-    case 'tasks':    return <PanelPlaceholder label="Tasks & Todos" />;
-    case 'agents':   return <PanelPlaceholder label="Agents" />;
+    case 'tasks':    return activeTaskId ? <TaskOutput /> : <TaskPanel />;
+    case 'agents':   return !activeAgentId ? <AgentDashboard /> : <AgentChat />;
     case 'mcp':      return <PanelPlaceholder label="MCP Servers" />;
     case 'git':      return <PanelPlaceholder label="Git" />;
     default:         return <PanelPlaceholder label="Chat panel" />;

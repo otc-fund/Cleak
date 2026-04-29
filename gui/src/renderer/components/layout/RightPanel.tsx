@@ -5,16 +5,6 @@ import { useSearch } from '../../store/search';
 import { ProcessList } from '../terminal/ProcessList';
 import { GlobPicker } from '../search/GlobPicker';
 import { ToolSearch } from '../search/ToolSearch';
-import { TodoPanel } from '../todos/TodoPanel';
-import { TaskPanel } from '../tasks/TaskPanel';
-import { TaskOutput } from '../tasks/TaskOutput';
-import { useTasks } from '../../store/tasks';
-import { useTodos } from '../../store/todos';
-import { useAgents } from '../../store/agents';
-import { AgentDashboard } from '../agents/AgentDashboard';
-import { AgentChat } from '../agents/AgentChat';
-import { AgentConfigEditor } from '../agents/AgentConfigEditor';
-import { AgentPermissions } from '../agents/AgentPermissions';
 
 function ToolCallPanel(): React.ReactElement {
   const selected = useUi((s) => s.selectedToolCall)!;
@@ -79,9 +69,6 @@ function ToolCallPanel(): React.ReactElement {
 export function RightPanel(): React.ReactElement | null {
   const { rightPanelOpen, selectedToolCall, activeActivity } = useUi();
   const { globResults } = useSearch();
-  const { tasks, activeTaskId } = useTasks();
-  const { todos } = useTodos();
-  const { activeAgentId } = useAgents();
   if (!rightPanelOpen) return null;
 
   let content: React.ReactNode;
@@ -91,19 +78,6 @@ export function RightPanel(): React.ReactElement | null {
     content = <ProcessList />;
   } else if (activeActivity === 'search') {
     content = globResults.length > 0 ? <ToolSearch /> : <GlobPicker />;
-  } else if (activeActivity === 'tasks') {
-    content = activeTaskId ? <TaskOutput /> : <TaskPanel />;
-  } else if (activeActivity === 'agents') {
-    if (!activeAgentId) {
-      content = <AgentDashboard />;
-    } else {
-      // When an agent is selected, show agent chat by default
-      content = <AgentChat />;
-    }
-  } else if (todos.length > 0) {
-    content = <TodoPanel />;
-  } else if (tasks.length > 0) {
-    content = activeTaskId ? <TaskOutput /> : <TaskPanel />;
   } else {
     content = (
       <div className="flex items-center justify-center h-full text-muted text-sm">

@@ -30,6 +30,7 @@ function PanelContent(): React.ReactElement {
     case 'search':   return <GrepPanel />;
     case 'processes': return <ProcessList />;
     case 'tasks':    return activeTaskId ? <TaskOutput /> : <TaskPanel />;
+    case 'todos':    return <TodoPanel />;
     case 'agents':   return !activeAgentId ? <AgentDashboard /> : <AgentChat />;
     case 'mcp':      return <PanelPlaceholder label="MCP Servers" />;
     case 'git':      return <PanelPlaceholder label="Git" />;

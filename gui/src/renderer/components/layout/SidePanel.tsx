@@ -9,6 +9,12 @@ import { TaskPanel } from '../tasks/TaskPanel';
 import { TaskOutput } from '../tasks/TaskOutput';
 import { AgentDashboard } from '../agents/AgentDashboard';
 import { AgentChat } from '../agents/AgentChat';
+import { SessionManager } from '../sessions/SessionManager';
+import { CronManager } from '../scheduling/CronManager';
+import { MonitorList } from '../scheduling/MonitorList';
+import { RemotePanel } from '../scheduling/RemotePanel';
+import { MemoryBrowser } from '../memory/MemoryBrowser';
+import { ContextUsageGrid } from '../context/ContextUsageGrid';
 import { useTasks } from '../../store/tasks';
 import { useAgents } from '../../store/agents';
 
@@ -25,16 +31,20 @@ function PanelContent(): React.ReactElement {
   const { tasks, activeTaskId } = useTasks();
   const { activeAgentId } = useAgents();
   switch (activeActivity) {
-    case 'settings': return <SettingsPanel />;
-    case 'files':    return <FilePanel />;
-    case 'search':   return <GrepPanel />;
-    case 'processes': return <ProcessList />;
-    case 'tasks':    return activeTaskId ? <TaskOutput /> : <TaskPanel />;
-    case 'todos':    return <TodoPanel />;
-    case 'agents':   return !activeAgentId ? <AgentDashboard /> : <AgentChat />;
-    case 'mcp':      return <PanelPlaceholder label="MCP Servers" />;
-    case 'git':      return <PanelPlaceholder label="Git" />;
-    default:         return <PanelPlaceholder label="Chat panel" />;
+    case 'settings':   return <SettingsPanel />;
+    case 'files':      return <FilePanel />;
+    case 'search':     return <GrepPanel />;
+    case 'processes':  return <ProcessList />;
+    case 'tasks':      return activeTaskId ? <TaskOutput /> : <TaskPanel />;
+    case 'todos':      return <TodoPanel />;
+    case 'agents':     return !activeAgentId ? <AgentDashboard /> : <AgentChat />;
+    case 'sessions':   return <SessionManager />;
+    case 'scheduling': return <CronManager />;
+    case 'memory':     return <MemoryBrowser />;
+    case 'context':    return <ContextUsageGrid />;
+    case 'mcp':        return <PanelPlaceholder label="MCP Servers" />;
+    case 'git':        return <PanelPlaceholder label="Git" />;
+    default:           return <PanelPlaceholder label="Chat panel" />;
   }
 }
 

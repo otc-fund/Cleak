@@ -6,11 +6,15 @@ export type Activity =
   | 'search'
   | 'processes'
   | 'tasks'
+  | 'todos'
   | 'agents'
+  | 'sessions'
+  | 'scheduling'
+  | 'memory'
+  | 'context'
   | 'mcp'
   | 'git'
-  | 'settings'
-  | 'todos';
+  | 'settings';
 
 export type MainTab = 'chat' | 'editor' | 'terminal';
 export type Theme = 'dark' | 'light' | 'high-contrast';

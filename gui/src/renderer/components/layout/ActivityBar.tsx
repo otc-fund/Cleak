@@ -7,6 +7,9 @@ import {
   CheckSquare,
   ListTodo,
   Users,
+  Clock,
+  Brain,
+  Activity as ActivityIcon,
   Plug,
   GitBranch,
   Settings,
@@ -16,16 +19,20 @@ import { useUi, type Activity } from '../../store/ui';
 import { cn } from '../../lib/cn';
 
 const ITEMS: { id: Activity; icon: React.ElementType; label: string }[] = [
-  { id: 'chat',     icon: MessageSquare, label: 'Chat'     },
-  { id: 'files',    icon: FolderOpen,    label: 'Files'    },
-  { id: 'search',   icon: Search,        label: 'Search'   },
-  { id: 'processes', icon: Cpu,          label: 'Processes' },
-  { id: 'tasks',    icon: CheckSquare,   label: 'Tasks'    },
-  { id: 'todos',    icon: ListTodo,      label: 'Todos'    },
-  { id: 'agents',   icon: Users,         label: 'Agents'   },
-  { id: 'mcp',      icon: Plug,          label: 'MCP'      },
-  { id: 'git',      icon: GitBranch,     label: 'Git'      },
-  { id: 'settings', icon: Settings,      label: 'Settings' },
+  { id: 'chat',       icon: MessageSquare, label: 'Chat'       },
+  { id: 'files',      icon: FolderOpen,    label: 'Files'      },
+  { id: 'search',     icon: Search,        label: 'Search'     },
+  { id: 'processes',  icon: Cpu,           label: 'Processes'  },
+  { id: 'tasks',      icon: CheckSquare,   label: 'Tasks'      },
+  { id: 'todos',      icon: ListTodo,      label: 'Todos'      },
+  { id: 'agents',     icon: Users,         label: 'Agents'     },
+  { id: 'sessions',   icon: Clock,         label: 'Sessions'   },
+  { id: 'scheduling', icon: Clock,         label: 'Scheduling' },
+  { id: 'memory',     icon: Brain,         label: 'Memory'     },
+  { id: 'context',    icon: ActivityIcon,  label: 'Context'    },
+  { id: 'mcp',        icon: Plug,          label: 'MCP'        },
+  { id: 'git',        icon: GitBranch,     label: 'Git'        },
+  { id: 'settings',   icon: Settings,      label: 'Settings'   },
 ];
 
 export function ActivityBar(): React.ReactElement {

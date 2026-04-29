@@ -8,6 +8,7 @@ interface SessionState {
   currentSession: Session | null;
   loadSessions(): Promise<void>;
   createSession(id: string, name?: string): void;
+  renameSession(id: string, name: string): void;
   selectSession(id: string): void;
   deleteSession(id: string): Promise<void>;
   exportSession(id: string): void;
@@ -61,6 +62,15 @@ export const useSessions = create<SessionState>((set) => ({
       void ipcSave(session);
       return { sessions: [...s.sessions, session], currentSession: session };
     });
+  },
+
+  renameSession(id, name) {
+    set(s => ({
+      sessions: s.sessions.map(sess =>
+        sess.id === id ? { ...sess, name } : sess,
+      ),
+    }));
+    void ipcUpdate(id, { name } as Record<string, unknown>);
   },
 
   syncSession(sessionId) {

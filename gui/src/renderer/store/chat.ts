@@ -71,6 +71,8 @@ interface ChatState {
   cost: CostData | null;
   agentTerminalMap: Map<string, string>;
   agentToolNameMap: Map<string, string>;
+  /** Text from the first user message, used as initial session name. */
+  pendingSessionName: string | null;
   appendUser(text: string): void;
   ingestFrame(frame: CleakInboundFrame): void;
   setStatus(s: BridgeStatus): void;
@@ -102,9 +104,12 @@ export const useChat = create<ChatState>((set) => ({
   status: { kind: 'starting' },
   errors: [],
   cost: null,
+  pendingSessionName: null,
 
   appendUser(text) {
+    const pendingName = text.trim().length > 50 ? text.trim().slice(0, 47) + '...' : text.trim();
     set((s) => ({
+      pendingSessionName: s.pendingSessionName ?? pendingName,
       messages: [
         ...s.messages,
         { id: nextId(), role: 'user', blocks: [{ type: 'text', text }], pending: false, ts: Date.now() },
@@ -143,15 +148,15 @@ export const useChat = create<ChatState>((set) => ({
 
       // Create session on first assistant frame with a session_id (before blocks check)
       if (sid) {
-        console.log('[chat] session creation triggered, sid:', sid);
+        const name = useChat.getState().pendingSessionName;
         import('../store/sessions').then(({ useSessions }) => {
           const sessState = useSessions.getState();
           const exists = sessState.sessions.some(s => s.id === sid);
-          console.log('[chat] session already exists:', exists, 'total sessions:', sessState.sessions.length);
           if (!exists) {
-            sessState.createSession(sid);
+            sessState.createSession(sid, name ?? undefined);
           }
           sessState.syncSession(sid);
+          useChat.setState({ pendingSessionName: null });
         });
       }
 

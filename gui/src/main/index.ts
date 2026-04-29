@@ -114,22 +114,6 @@ async function createWindow(): Promise<void> {
 
   bridge.on('status', (s: BridgeStatus) => {
     if (!win.isDestroyed()) win.webContents.send(IpcChannels.status, s);
-    // Persist session when bridge transitions to running with a sessionId
-    if (s.kind === 'running' && s.sessionId) {
-      const sessions = loadSessions();
-      if (!sessions.some(sess => sess.id === s.sessionId)) {
-        saveSessions([...sessions, {
-          id: s.sessionId,
-          name: `Session ${sessions.length + 1}`,
-          createdAt: Date.now(),
-          lastActive: Date.now(),
-          messageCount: 0,
-          tokenCount: 0,
-          cost: 0,
-          pinned: false,
-        }]);
-      }
-    }
   });
   bridge.on('frame', (f: CleakInboundFrame) => {
     if (f.type === 'result') {

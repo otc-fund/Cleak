@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Plus, Pin, PinOff, Trash2 } from 'lucide-react';
+import { Plus, Pin, PinOff, Trash2, Pencil } from 'lucide-react';
 import { useSessions } from '../../store/sessions';
 
 function SectionHeader({ label }: { label: string }): React.ReactElement {
@@ -8,7 +8,7 @@ function SectionHeader({ label }: { label: string }): React.ReactElement {
 
 function SessionRow({
   id, name, active, pinned,
-  onClick, onPin, onDelete,
+  onClick, onPin, onDelete, onRename,
 }: {
   id: string;
   name: string;
@@ -17,8 +17,25 @@ function SessionRow({
   onClick(): void;
   onPin(): void;
   onDelete(): void;
+  onRename(newName: string): void;
 }): React.ReactElement {
+  const [editing, setEditing] = React.useState(false);
+  const [draft, setDraft] = React.useState(name);
+  const inputRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    if (editing) { inputRef.current?.focus(); inputRef.current?.select(); }
+  }, [editing]);
+
+  function commit() {
+    const trimmed = draft.trim();
+    if (trimmed && trimmed !== name) onRename(trimmed);
+    else setDraft(name);
+    setEditing(false);
+  }
+
   const isPinned = pinned === true;
+
   return (
     <div
       className={`group flex items-center gap-2 px-3 py-1.5 text-sm cursor-pointer transition-colors ${
@@ -27,8 +44,36 @@ function SessionRow({
       onClick={onClick}
     >
       <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${active ? 'bg-primary' : 'bg-muted'}`} />
-      <span className="flex-1 truncate">{name}</span>
+
+      {editing ? (
+        <input
+          ref={inputRef}
+          className="flex-1 bg-[#0b0b0b] text-xs text-primary px-1.5 py-0.5 rounded border border-border outline-none"
+          value={draft}
+          onChange={e => setDraft(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') { setDraft(name); setEditing(false); } }}
+          onBlur={commit}
+          onClick={e => e.stopPropagation()}
+        />
+      ) : (
+        <span
+          className="flex-1 truncate"
+          onDoubleClick={e => { e.stopPropagation(); setDraft(name); setEditing(true); }}
+        >
+          {name}
+        </span>
+      )}
+
       <div className="hidden group-hover:flex items-center gap-0.5 shrink-0">
+        {!editing && (
+          <button
+            className="p-0.5 rounded text-muted hover:text-primary transition-colors"
+            onClick={e => { e.stopPropagation(); setDraft(name); setEditing(true); }}
+            title="Rename"
+          >
+            <Pencil size={10} />
+          </button>
+        )}
         <button
           className="p-0.5 rounded text-muted hover:text-primary transition-colors"
           onClick={e => { e.stopPropagation(); onPin(); }}
@@ -49,7 +94,7 @@ function SessionRow({
 }
 
 export function SessionManager(): React.ReactElement {
-  const { sessions, loadSessions, currentSession, selectSession, togglePin, deleteSession } = useSessions();
+  const { sessions, loadSessions, currentSession, selectSession, togglePin, deleteSession, renameSession } = useSessions();
   const [query, setQuery] = React.useState('');
 
   useEffect(() => { void loadSessions(); }, []);
@@ -93,6 +138,7 @@ export function SessionManager(): React.ReactElement {
                 onClick={() => selectSession(s.id)}
                 onPin={() => togglePin(s.id)}
                 onDelete={() => void deleteSession(s.id)}
+                onRename={(n) => renameSession(s.id, n)}
               />
             ))}
           </>
@@ -111,6 +157,7 @@ export function SessionManager(): React.ReactElement {
             onClick={() => selectSession(s.id)}
             onPin={() => togglePin(s.id)}
             onDelete={() => void deleteSession(s.id)}
+            onRename={(n) => renameSession(s.id, n)}
           />
         ))}
       </div>

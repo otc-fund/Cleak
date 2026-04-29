@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Plus, Pin, PinOff, Trash2 } from 'lucide-react';
 import { useSessions } from '../../store/sessions';
 
@@ -49,10 +49,8 @@ function SessionRow({
 }
 
 export function SessionManager(): React.ReactElement {
-  const { sessions, loadSessions, currentSession, selectSession, togglePin, deleteSession } = useSessions();
+  const { sessions, currentSession, selectSession, togglePin, deleteSession } = useSessions();
   const [query, setQuery] = React.useState('');
-
-  useEffect(() => { void loadSessions(); }, []);
 
   const filtered = query
     ? sessions.filter(s => s.name.toLowerCase().includes(query.toLowerCase()))

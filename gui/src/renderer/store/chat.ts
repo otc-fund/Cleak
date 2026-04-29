@@ -137,21 +137,25 @@ export const useChat = create<ChatState>((set) => ({
     }
     if (frame.type === 'assistant') {
       const raw2 = frame as any;
-      rlog('assistant frame, content type:', typeof raw2.message?.content, 'preview:', JSON.stringify(raw2.message?.content)?.slice(0, 200));
+      const sid = raw2.session_id;
+      rlog('assistant frame, session_id:', sid, 'raw keys:', Object.keys(raw2).join(','), 'content type:', typeof raw2.message?.content, 'preview:', JSON.stringify(raw2.message?.content)?.slice(0, 200));
       const blocks = extractBlocks(frame);
-      if (blocks.length === 0) return;
 
-      // Create session on first assistant frame with a session_id
-      const sid = frame.session_id;
+      // Create session on first assistant frame with a session_id (before blocks check)
       if (sid) {
+        console.log('[chat] session creation triggered, sid:', sid);
         import('../store/sessions').then(({ useSessions }) => {
           const sessState = useSessions.getState();
-          if (!sessState.sessions.some(s => s.id === sid)) {
+          const exists = sessState.sessions.some(s => s.id === sid);
+          console.log('[chat] session already exists:', exists, 'total sessions:', sessState.sessions.length);
+          if (!exists) {
             sessState.createSession(sid);
           }
           sessState.syncSession(sid);
         });
       }
+
+      if (blocks.length === 0) return;
 
       // Emit highlights for file-related tool calls
       const FILE_TOOLS: Record<string, 'read' | 'edit'> = {

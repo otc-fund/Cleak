@@ -185,6 +185,12 @@ export const useChat = create<ChatState>((set) => ({
             const state = useChat.getState();
             state.agentToolNameMap.set(block.id, block.name);
           }
+
+          // Track TodoWriteTool names for result routing
+          if (block.name === 'TodoWriteTool') {
+            const state = useChat.getState();
+            state.agentToolNameMap.set(block.id, block.name);
+          }
         }
 
         // When tool_result arrives, route output to the terminal
@@ -226,12 +232,22 @@ export const useChat = create<ChatState>((set) => ({
           // Sync TodoWriteTool results to todos store
           if (toolName === 'TodoWriteTool') {
             try {
-              const todos = typeof block.content === 'string'
+              let raw = typeof block.content === 'string'
                 ? JSON.parse(block.content)
                 : block.content;
-              if (Array.isArray(todos)) {
+              let todos: unknown[] | undefined;
+              if (Array.isArray(raw)) {
+                todos = raw;
+              } else if (raw && typeof raw === 'object' && Array.isArray((raw as Record<string, unknown>).todos)) {
+                todos = (raw as Record<string, unknown>).todos as unknown[];
+              }
+              if (todos) {
                 import('../store/todos').then(({ useTodos }) => {
-                  useTodos.getState().setTodos(todos);
+                  useTodos.getState().setTodos(todos as import('../store/todos').Todo[]);
+                  // Auto-open right panel to show todos
+                  import('../store/ui').then(({ useUi }) => {
+                    useUi.getState().setRightPanelOpen(true);
+                  });
                 });
               }
             } catch { /* ignore parse errors */ }

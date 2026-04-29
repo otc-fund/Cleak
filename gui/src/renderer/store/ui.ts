@@ -28,12 +28,14 @@ interface UiState {
   activeMainTab: MainTab;
   theme: Theme;
   selectedToolCall: ToolCallDetail | null;
+  planMode: boolean;
   setActivity(a: Activity): void;
   setSidePanelOpen(open: boolean): void;
   setRightPanelOpen(open: boolean): void;
   setMainTab(tab: MainTab): void;
   setTheme(t: Theme): void;
   setSelectedToolCall(detail: ToolCallDetail | null): void;
+  setPlanMode(v: boolean): void;
 }
 
 export const useUi = create<UiState>((set, get) => ({
@@ -43,6 +45,7 @@ export const useUi = create<UiState>((set, get) => ({
   activeMainTab: 'chat',
   theme: 'dark',
   selectedToolCall: null,
+  planMode: false,
 
   setActivity(a) {
     const { activeActivity, sidePanelOpen } = get();
@@ -57,4 +60,5 @@ export const useUi = create<UiState>((set, get) => ({
   setMainTab: (tab) => set({ activeMainTab: tab }),
   setTheme: (theme) => set({ theme }),
   setSelectedToolCall: (detail) => set({ selectedToolCall: detail, rightPanelOpen: detail != null }),
+  setPlanMode: (v) => set({ planMode: v }),
 }));

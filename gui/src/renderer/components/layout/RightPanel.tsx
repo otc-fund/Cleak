@@ -5,6 +5,11 @@ import { useSearch } from '../../store/search';
 import { ProcessList } from '../terminal/ProcessList';
 import { GlobPicker } from '../search/GlobPicker';
 import { ToolSearch } from '../search/ToolSearch';
+import { TodoPanel } from '../todos/TodoPanel';
+import { TaskPanel } from '../tasks/TaskPanel';
+import { TaskOutput } from '../tasks/TaskOutput';
+import { useTasks } from '../../store/tasks';
+import { useTodos } from '../../store/todos';
 
 function ToolCallPanel(): React.ReactElement {
   const selected = useUi((s) => s.selectedToolCall)!;
@@ -20,7 +25,6 @@ function ToolCallPanel(): React.ReactElement {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
       <div className="flex items-center gap-2 px-3 py-2 border-b shrink-0" style={{ borderColor: 'var(--border)' }}>
         <span className="text-xs font-medium flex-1 truncate">Tool: {selected.toolName}</span>
         <button className="p-0.5 hover:text-primary transition-colors" onClick={clear}>
@@ -29,7 +33,6 @@ function ToolCallPanel(): React.ReactElement {
       </div>
 
       <div className="flex-1 overflow-y-auto px-3 py-2 space-y-2">
-        {/* Params */}
         {selected.input != null && (
           <div>
             <button
@@ -47,7 +50,6 @@ function ToolCallPanel(): React.ReactElement {
           </div>
         )}
 
-        {/* Result */}
         {resultText != null && (
           <div>
             <button
@@ -72,6 +74,8 @@ function ToolCallPanel(): React.ReactElement {
 export function RightPanel(): React.ReactElement | null {
   const { rightPanelOpen, selectedToolCall, activeActivity } = useUi();
   const { globResults } = useSearch();
+  const { tasks, activeTaskId } = useTasks();
+  const { todos } = useTodos();
   if (!rightPanelOpen) return null;
 
   let content: React.ReactNode;
@@ -81,6 +85,12 @@ export function RightPanel(): React.ReactElement | null {
     content = <ProcessList />;
   } else if (activeActivity === 'search') {
     content = globResults.length > 0 ? <ToolSearch /> : <GlobPicker />;
+  } else if (activeActivity === 'tasks') {
+    content = activeTaskId ? <TaskOutput /> : <TaskPanel />;
+  } else if (todos.length > 0) {
+    content = <TodoPanel />;
+  } else if (tasks.length > 0) {
+    content = activeTaskId ? <TaskOutput /> : <TaskPanel />;
   } else {
     content = (
       <div className="flex items-center justify-center h-full text-muted text-sm">

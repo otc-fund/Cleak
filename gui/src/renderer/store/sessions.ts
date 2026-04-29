@@ -14,10 +14,12 @@ interface SessionState {
   sessions: Session[];
   currentSession: Session | null;
   loadSessions(): Promise<void>;
+  createSession(id: string, name?: string): void;
   selectSession(id: string): void;
   deleteSession(id: string): Promise<void>;
   exportSession(id: string): void;
   importSession(file: File): Promise<void>;
+  syncSession(sessionId: string): void;
 }
 
 export const useSessions = create<SessionState>((set) => ({
@@ -28,6 +30,31 @@ export const useSessions = create<SessionState>((set) => ({
     // Request session list from bridge
     // const sessions = await window.bridge.listSessions();
     set({ sessions: [] });
+  },
+
+  createSession(id, name) {
+    set(s => {
+      if (s.sessions.some(sess => sess.id === id)) return s;
+      const now = Date.now();
+      const session: Session = {
+        id,
+        name: name ?? `Session ${s.sessions.length + 1}`,
+        createdAt: now,
+        lastActive: now,
+        messageCount: 0,
+        tokenCount: 0,
+        cost: 0,
+      };
+      return { sessions: [...s.sessions, session], currentSession: session };
+    });
+  },
+
+  syncSession(sessionId) {
+    set(s => ({
+      sessions: s.sessions.map(sess =>
+        sess.id === sessionId ? { ...sess, lastActive: Date.now(), messageCount: sess.messageCount + 1 } : sess,
+      ),
+    }));
   },
 
   selectSession(id) {

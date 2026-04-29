@@ -141,6 +141,18 @@ export const useChat = create<ChatState>((set) => ({
       const blocks = extractBlocks(frame);
       if (blocks.length === 0) return;
 
+      // Create session on first assistant frame with a session_id
+      const sid = frame.session_id;
+      if (sid) {
+        import('../store/sessions').then(({ useSessions }) => {
+          const sessState = useSessions.getState();
+          if (!sessState.sessions.some(s => s.id === sid)) {
+            sessState.createSession(sid);
+          }
+          sessState.syncSession(sid);
+        });
+      }
+
       // Emit highlights for file-related tool calls
       const FILE_TOOLS: Record<string, 'read' | 'edit'> = {
         FileReadTool: 'read',

@@ -42,6 +42,7 @@ export interface SearchState {
 
   // Glob picker
   globResults: string[];
+  globRunning: boolean;
   runGlob(pattern: string, cwd: string): Promise<void>;
 }
 
@@ -105,13 +106,17 @@ export const useSearch = create<SearchState>((set, get) => ({
 
   // Glob
   globResults: [],
+  globRunning: false,
   async runGlob(pattern, cwd) {
+    set({ globRunning: true });
     try {
       const raw = await window.bridge.searchGlob(pattern, cwd) as string[];
       set({ globResults: raw });
     } catch (err) {
       console.error('[search:runGlob] Error:', err);
       set({ globResults: [] });
+    } finally {
+      set({ globRunning: false });
     }
   },
 }));

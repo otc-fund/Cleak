@@ -1,16 +1,7 @@
 import { create } from 'zustand';
+import type { PersistedSession } from '../../main/sessionsStore';
 
-export interface Session {
-  id: string;
-  name: string;
-  createdAt: number;
-  lastActive: number;
-  messageCount: number;
-  tokenCount: number;
-  cost: number;
-  /** Whether session is pinned to top of list. */
-  pinned?: boolean;
-}
+export type Session = PersistedSession;
 
 interface SessionState {
   sessions: Session[];
@@ -26,14 +17,31 @@ interface SessionState {
   clearSessions(): void;
 }
 
+const bridge = typeof window !== 'undefined' ? (window as any).bridge : undefined;
+
+async function ipcSave(session: Session): Promise<void> {
+  await bridge?.saveSession(session);
+}
+
+async function ipcDelete(id: string): Promise<void> {
+  await bridge?.deleteSession(id);
+}
+
+async function ipcUpdate(id: string, patch: Record<string, unknown>): Promise<void> {
+  await bridge?.updateSession(id, patch);
+}
+
 export const useSessions = create<SessionState>((set) => ({
   sessions: [],
   currentSession: null,
 
   async loadSessions() {
-    // Request session list from bridge
-    // const sessions = await window.bridge.listSessions();
-    set({ sessions: [] });
+    try {
+      const persisted = await bridge?.listSessions() as Session[] | undefined;
+      set({ sessions: persisted ?? [] });
+    } catch {
+      set({ sessions: [] });
+    }
   },
 
   createSession(id, name) {
@@ -48,7 +56,9 @@ export const useSessions = create<SessionState>((set) => ({
         messageCount: 0,
         tokenCount: 0,
         cost: 0,
+        pinned: false,
       };
+      void ipcSave(session);
       return { sessions: [...s.sessions, session], currentSession: session };
     });
   },
@@ -59,6 +69,12 @@ export const useSessions = create<SessionState>((set) => ({
         sess.id === sessionId ? { ...sess, lastActive: Date.now(), messageCount: sess.messageCount + 1 } : sess,
       ),
     }));
+    // Debounced persist: update lastActive and messageCount
+    setTimeout(() => {
+      const state = useSessions.getState();
+      const session = state.sessions.find(s => s.id === sessionId);
+      if (session) void ipcUpdate(sessionId, { lastActive: session.lastActive, messageCount: session.messageCount } as Record<string, unknown>);
+    }, 2000);
   },
 
   selectSession(id) {
@@ -69,8 +85,11 @@ export const useSessions = create<SessionState>((set) => ({
   },
 
   async deleteSession(id) {
-    // await window.bridge.deleteSession(id);
-    set(s => ({ sessions: s.sessions.filter(s => s.id !== id) }));
+    set(s => ({
+      sessions: s.sessions.filter(s => s.id !== id),
+      currentSession: s.currentSession?.id === id ? null : s.currentSession,
+    }));
+    await ipcDelete(id);
   },
 
   exportSession(id) {
@@ -84,9 +103,12 @@ export const useSessions = create<SessionState>((set) => ({
   togglePin(id) {
     set(s => ({
       sessions: s.sessions.map(sess =>
-        sess.id === id ? { ...sess, pinned: sess.pinned ? undefined : true } : sess,
+        sess.id === id ? { ...sess, pinned: !sess.pinned } : sess,
       ),
     }));
+    const state = useSessions.getState();
+    const session = state.sessions.find(s => s.id === id);
+    if (session) void ipcUpdate(id, { pinned: session.pinned } as Record<string, unknown>);
   },
 
   clearSessions() {

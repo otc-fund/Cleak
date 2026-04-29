@@ -1,7 +1,8 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import { IpcChannels, FileIpcChannels, PtyIpcChannels, SearchIpcChannels } from '../main/ipc';
+import { IpcChannels, FileIpcChannels, PtyIpcChannels, SearchIpcChannels, SessionIpcChannels } from '../main/ipc';
 import type { BridgeStatus, BridgeEventMap, AppSettings } from '../main/ipc';
 import type { CleakInboundFrame } from '../main/cleakProtocol';
+import type { PersistedSession } from '../main/sessionsStore';
 
 const api = {
   sendUserMessage(text: string): void {
@@ -75,6 +76,19 @@ const api = {
     ipcRenderer.invoke(SearchIpcChannels.glob, { pattern, path }),
   searchReadLines: (filePath: string, startLine: number, endLine: number) =>
     ipcRenderer.invoke(SearchIpcChannels.readFileLines, { filePath, startLine, endLine }),
+  // Session IPC
+  listSessions(): Promise<PersistedSession[]> {
+    return ipcRenderer.invoke(SessionIpcChannels.list) as Promise<PersistedSession[]>;
+  },
+  saveSession(session: PersistedSession): Promise<void> {
+    return ipcRenderer.invoke(SessionIpcChannels.save, session) as Promise<void>;
+  },
+  deleteSession(id: string): Promise<void> {
+    return ipcRenderer.invoke(SessionIpcChannels.delete, id) as Promise<void>;
+  },
+  updateSession(id: string, patch: Record<string, unknown>): Promise<void> {
+    return ipcRenderer.invoke(SessionIpcChannels.update, id, patch) as Promise<void>;
+  },
 };
 
 export type BridgeApi = typeof api;

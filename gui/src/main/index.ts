@@ -13,6 +13,8 @@ import { loadSettings, saveSettings } from './settings';
 import { getFileTree } from './fileTree';
 import { runGrep, runGlob } from './grepEngine';
 import * as fs from 'fs';
+import { loadSessions, saveSessions, type PersistedSession } from './sessionsStore';
+import { SessionIpcChannels } from './ipc';
 
 const isDev = !app.isPackaged;
 
@@ -112,6 +114,22 @@ async function createWindow(): Promise<void> {
 
   bridge.on('status', (s: BridgeStatus) => {
     if (!win.isDestroyed()) win.webContents.send(IpcChannels.status, s);
+    // Persist session when bridge transitions to running with a sessionId
+    if (s.kind === 'running' && s.sessionId) {
+      const sessions = loadSessions();
+      if (!sessions.some(sess => sess.id === s.sessionId)) {
+        saveSessions([...sessions, {
+          id: s.sessionId,
+          name: `Session ${sessions.length + 1}`,
+          createdAt: Date.now(),
+          lastActive: Date.now(),
+          messageCount: 0,
+          tokenCount: 0,
+          cost: 0,
+          pinned: false,
+        }]);
+      }
+    }
   });
   bridge.on('frame', (f: CleakInboundFrame) => {
     if (f.type === 'result') {
@@ -171,6 +189,30 @@ async function createWindow(): Promise<void> {
     } catch (err) {
       console.error('[search:readFileLines] Error:', err);
       throw err;
+    }
+  });
+
+  // Session IPC handlers
+  ipcMain.handle(SessionIpcChannels.list, (): PersistedSession[] => loadSessions());
+
+  ipcMain.handle(SessionIpcChannels.save, (_e, session: PersistedSession): void => {
+    const sessions = loadSessions();
+    const idx = sessions.findIndex(s => s.id === session.id);
+    if (idx >= 0) sessions[idx] = session; else sessions.push(session);
+    saveSessions(sessions);
+  });
+
+  ipcMain.handle(SessionIpcChannels.delete, (_e, id: string): void => {
+    const sessions = loadSessions().filter(s => s.id !== id);
+    saveSessions(sessions);
+  });
+
+  ipcMain.handle(SessionIpcChannels.update, (_e, id: string, patch: Record<string, unknown>): void => {
+    const sessions = loadSessions();
+    const session = sessions.find(s => s.id === id);
+    if (session) {
+      Object.assign(session, patch);
+      saveSessions(sessions);
     }
   });
 

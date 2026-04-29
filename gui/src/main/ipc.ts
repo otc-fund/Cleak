@@ -49,6 +49,13 @@ export const PtyIpcChannels = {
   exit:     'pty:exit',
 } as const;
 
+export const SessionIpcChannels = {
+  list:    'sessions:list',
+  save:    'sessions:save',
+  delete:  'sessions:delete',
+  update:  'sessions:update',
+} as const;
+
 export const SearchIpcChannels = {
   grep:          'search:grep',          // renderer → main: { pattern, path, glob?, regex? } → GrepMatch[]
   glob:          'search:glob',           // renderer → main: { pattern, path } → string[] (file paths)

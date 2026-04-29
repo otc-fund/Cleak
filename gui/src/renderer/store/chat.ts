@@ -281,6 +281,85 @@ export const useChat = create<ChatState>((set) => ({
             } catch { /* ignore parse errors */ }
           }
 
+          // Handle AgentTool / TeamCreateTool / TeamDeleteTool results
+          if (toolName === 'AgentTool' || toolName === 'TeamCreateTool') {
+            try {
+              const data = typeof block.content === 'string'
+                ? JSON.parse(block.content)
+                : block.content;
+              if (data && typeof data === 'object' && data.id && data.name) {
+                import('../store/agents').then(({ useAgents }) => {
+                  if (data.action === 'remove') {
+                    useAgents.getState().removeAgent(data.id);
+                  } else {
+                    useAgents.getState().registerAgent({
+                      id: data.id,
+                      name: data.name,
+                      color: data.color ?? '#3b82f6',
+                      status: data.status ?? 'working',
+                      currentTask: data.currentTask,
+                      config: data.config,
+                    });
+                  }
+                });
+              }
+            } catch { /* ignore parse errors */ }
+          }
+
+          if (toolName === 'TeamDeleteTool') {
+            try {
+              const data = typeof block.content === 'string'
+                ? JSON.parse(block.content)
+                : block.content;
+              if (data && typeof data === 'object' && data.id) {
+                import('../store/agents').then(({ useAgents }) => {
+                  useAgents.getState().removeAgent(data.id);
+                });
+              }
+            } catch { /* ignore parse errors */ }
+          }
+
+          // Handle SendMessageTool results
+          if (toolName === 'SendMessageTool') {
+            try {
+              const data = typeof block.content === 'string'
+                ? JSON.parse(block.content)
+                : block.content;
+              if (data && typeof data === 'object' && data.from && data.to && data.content) {
+                import('../store/agents').then(({ useAgents }) => {
+                  useAgents.getState().addMessage({
+                    from: data.from,
+                    to: data.to,
+                    content: data.content,
+                    timestamp: Date.now(),
+                  });
+                });
+              }
+            } catch { /* ignore parse errors */ }
+          }
+
+          // Handle AskUserQuestionTool — show modal
+          if (toolName === 'AskUserQuestionTool') {
+            try {
+              const data = typeof block.content === 'string'
+                ? JSON.parse(block.content)
+                : block.content;
+              if (data && typeof data === 'object') {
+                import('../store/agents').then(({ useAskUser }) => {
+                  useAskUser.getState().setPending({
+                    id: data.id ?? crypto.randomUUID(),
+                    question: data.question ?? 'Agent is asking for input',
+                    options: Array.isArray(data.options) ? data.options : [],
+                    allowText: data.allowText ?? true,
+                  });
+                  import('../store/ui').then(({ useUi }) => {
+                    useUi.getState().setSidePanelOpen(false);
+                  });
+                });
+              }
+            } catch { /* ignore parse errors */ }
+          }
+
           // Clean up the tool name mapping
           state.agentToolNameMap.delete(block.tool_use_id);
         }

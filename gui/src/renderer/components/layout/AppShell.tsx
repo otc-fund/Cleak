@@ -5,6 +5,7 @@ import { MainArea } from './MainArea';
 import { RightPanel } from './RightPanel';
 import { StatusBar } from '../StatusBar';
 import { PlanModeBanner } from '../plan/PlanModeBanner';
+import { AskUserQuestionModal } from '../modals/AskUserQuestionModal';
 import { useUi } from '../../store/ui';
 import { useSettings } from '../../store/settings';
 
@@ -26,6 +27,7 @@ export function AppShell(): React.ReactElement {
   return (
     <div className="flex flex-col h-full" style={{ background: 'var(--bg-base)' }}>
       <PlanModeBanner />
+      <AskUserQuestionModal />
       <div className="flex flex-1 min-h-0">
         <ActivityBar />
         <SidePanel />

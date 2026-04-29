@@ -5,6 +5,7 @@ describe('tasks store', () => {
   beforeEach(() => {
     useTasks.getState().clear();
   });
+  /* eslint-disable @typescript-eslint/no-non-null-asserted-optional-chain */
 
   it('starts with empty tasks and no active task', () => {
     const { tasks, activeTaskId } = useTasks.getState();
@@ -16,7 +17,7 @@ describe('tasks store', () => {
     useTasks.getState().registerTask('t1', 'Root Task');
     const { tasks } = useTasks.getState();
     expect(tasks).toHaveLength(1);
-    expect(tasks[0]).toMatchObject({
+    expect(tasks[0]!).toMatchObject({
       id: 't1',
       name: 'Root Task',
       status: 'running',
@@ -30,22 +31,22 @@ describe('tasks store', () => {
     useTasks.getState().registerTask('t2', 'Child', 't1');
     const { tasks } = useTasks.getState();
     expect(tasks).toHaveLength(2);
-    expect(tasks[1].parentId).toBe('t1');
+    expect(tasks[1]!.parentId).toBe('t1');
   });
 
   it('updates task status', () => {
     useTasks.getState().registerTask('t1', 'Task');
     useTasks.getState().updateStatus('t1', 'completed');
     const { tasks } = useTasks.getState();
-    expect(tasks[0].status).toBe('completed');
+    expect(tasks[0]!.status).toBe('completed');
   });
 
   it('updates task status with error message', () => {
     useTasks.getState().registerTask('t1', 'Task');
     useTasks.getState().updateStatus('t1', 'failed', 'Something went wrong');
     const { tasks } = useTasks.getState();
-    expect(tasks[0].status).toBe('failed');
-    expect(tasks[0].error).toBe('Something went wrong');
+    expect(tasks[0]!.status).toBe('failed');
+    expect(tasks[0]!.error).toBe('Something went wrong');
   });
 
   it('appends output to a task', () => {
@@ -53,7 +54,7 @@ describe('tasks store', () => {
     useTasks.getState().appendOutput('t1', 'Hello ');
     useTasks.getState().appendOutput('t1', 'World');
     const { tasks } = useTasks.getState();
-    expect(tasks[0].output).toBe('Hello World');
+    expect(tasks[0]!.output).toBe('Hello World');
   });
 
   it('sets active task', () => {

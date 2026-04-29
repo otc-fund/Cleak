@@ -9,7 +9,8 @@ export type Activity =
   | 'agents'
   | 'mcp'
   | 'git'
-  | 'settings';
+  | 'settings'
+  | 'todos';
 
 export type MainTab = 'chat' | 'editor' | 'terminal';
 export type Theme = 'dark' | 'light' | 'high-contrast';
@@ -52,7 +53,9 @@ export const useUi = create<UiState>((set, get) => ({
     if (a === activeActivity) {
       set({ sidePanelOpen: !sidePanelOpen });
     } else {
-      set({ activeActivity: a, sidePanelOpen: true });
+      // Activities that require the right panel to be visible
+      const opensRight: Activity[] = ['tasks', 'todos'];
+      set({ activeActivity: a, sidePanelOpen: true, rightPanelOpen: opensRight.includes(a) });
     }
   },
   setSidePanelOpen: (open) => set({ sidePanelOpen: open }),

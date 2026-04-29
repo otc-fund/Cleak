@@ -14,7 +14,7 @@ export interface SubAgentTask {
 interface TasksState {
   tasks: SubAgentTask[];
   activeTaskId: string | null;
-  registerTask(id: string, name: string, parentId?: string): void;
+  registerTask(id: string, name: string, parentId?: string | null): void;
   updateStatus(id: string, status: TaskStatus, error?: string): void;
   appendOutput(id: string, text: string): void;
   setActive(id: string | null): void;
@@ -25,7 +25,7 @@ interface TasksState {
 export const useTasks = create<TasksState>((set) => ({
   tasks: [],
   activeTaskId: null,
-  registerTask: (id, name, parentId: string | null = null) =>
+  registerTask: (id, name, parentId: string | null | undefined = null) =>
     set(s => ({
       tasks: [...s.tasks, { id, name, status: 'running', parentId, output: '' }],
     })),

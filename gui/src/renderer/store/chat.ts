@@ -191,6 +191,17 @@ export const useChat = create<ChatState>((set) => ({
             const state = useChat.getState();
             state.agentToolNameMap.set(block.id, block.name);
           }
+
+          // Register TaskTool sub-agent on tool_use (not result)
+          if (block.name === 'TaskTool') {
+            const input = block.input as Record<string, unknown>;
+            const taskId = (input['id'] ?? block.id) as string;
+            const taskName = (input['name'] ?? input['task'] ?? block.name) as string;
+            const parentId = input['parentId'] as string | null ?? input['parent_id'] as string | null;
+            import('../store/tasks').then(({ useTasks }) => {
+              useTasks.getState().registerTask(taskId, taskName, parentId ?? undefined);
+            });
+          }
         }
 
         // When tool_result arrives, route output to the terminal
@@ -249,22 +260,25 @@ export const useChat = create<ChatState>((set) => ({
             } catch { /* ignore parse errors */ }
           }
 
-          // Handle TaskTool / TaskOutputTool / TaskStopTool results
+          // Handle TaskTool status update on result (task already registered on tool_use)
           if (toolName === 'TaskTool') {
-            try {
-              const data = typeof block.content === 'string'
-                ? JSON.parse(block.content)
-                : block.content;
-              if (data && typeof data === 'object') {
-                import('../store/tasks').then(({ useTasks }) => {
-                  if (data.action === 'register' && data.id && data.name) {
-                    useTasks.getState().registerTask(data.id, data.name, data.parentId);
-                  } else if (data.action === 'update' && data.id && data.status) {
-                    useTasks.getState().updateStatus(data.id, data.status, data.error);
-                  }
-                });
-              }
-            } catch { /* ignore parse errors */ }
+            const taskResult = typeof block.content === 'string' ? block.content : JSON.stringify(block.content);
+            if (taskResult.includes('failed') || taskResult.includes('error')) {
+              import('../store/tasks').then(({ useTasks }) => {
+                // Find the task for this tool_use and mark failed
+                const taskId = block.tool_use_id;
+                const tasks = useTasks.getState().tasks;
+                const task = tasks.find(t => t.id === taskId);
+                if (task) useTasks.getState().updateStatus(taskId, 'failed', taskResult);
+              });
+            } else {
+              import('../store/tasks').then(({ useTasks }) => {
+                const taskId = block.tool_use_id;
+                const tasks = useTasks.getState().tasks;
+                const task = tasks.find(t => t.id === taskId);
+                if (task) useTasks.getState().updateStatus(taskId, 'completed');
+              });
+            }
           }
 
           if (toolName === 'TaskOutputTool') {

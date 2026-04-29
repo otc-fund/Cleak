@@ -3,6 +3,7 @@ import { useUi } from '../../store/ui';
 import { SettingsPanel } from '../settings/SettingsPanel';
 import { FilePanel } from '../files/FilePanel';
 import { ProcessList } from '../terminal/ProcessList';
+import { GrepPanel } from '../search/GrepPanel';
 
 function PanelPlaceholder({ label }: { label: string }): React.ReactElement {
   return (
@@ -17,7 +18,7 @@ function PanelContent(): React.ReactElement {
   switch (activeActivity) {
     case 'settings': return <SettingsPanel />;
     case 'files':    return <FilePanel />;
-    case 'search':   return <PanelPlaceholder label="Search" />;
+    case 'search':   return <GrepPanel />;
     case 'processes': return <ProcessList />;
     case 'tasks':    return <PanelPlaceholder label="Tasks & Todos" />;
     case 'agents':   return <PanelPlaceholder label="Agents" />;

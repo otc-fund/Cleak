@@ -38,6 +38,8 @@
     "@xterm/xterm": "^6.0.0",
     "chokidar": "^3.6.0",
     "clsx": "^2.1.1",
+    "fast-glob": "^3.3.3",
+    "fuse.js": "^7.3.0",
     "highlight.js": "^11.11.1",
     "ignore": "^7.0.5",
     "lucide-react": "^1.11.0",

@@ -48,3 +48,9 @@ export const PtyIpcChannels = {
   data:     'pty:data',
   exit:     'pty:exit',
 } as const;
+
+export const SearchIpcChannels = {
+  grep:          'search:grep',          // renderer → main: { pattern, path, glob?, regex? } → GrepMatch[]
+  glob:          'search:glob',           // renderer → main: { pattern, path } → string[] (file paths)
+  readFileLines: 'search:readFileLines',  // renderer → main: { filePath, startLine, endLine } → string[]
+} as const;

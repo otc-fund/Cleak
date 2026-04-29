@@ -8,6 +8,8 @@ export interface Session {
   messageCount: number;
   tokenCount: number;
   cost: number;
+  /** Whether session is pinned to top of list. */
+  pinned?: boolean;
 }
 
 interface SessionState {
@@ -20,6 +22,8 @@ interface SessionState {
   exportSession(id: string): void;
   importSession(file: File): Promise<void>;
   syncSession(sessionId: string): void;
+  togglePin(id: string): void;
+  clearSessions(): void;
 }
 
 export const useSessions = create<SessionState>((set) => ({
@@ -75,5 +79,17 @@ export const useSessions = create<SessionState>((set) => ({
 
   async importSession(file) {
     // Read file, parse JSON, send to bridge as new session
+  },
+
+  togglePin(id) {
+    set(s => ({
+      sessions: s.sessions.map(sess =>
+        sess.id === id ? { ...sess, pinned: sess.pinned ? undefined : true } : sess,
+      ),
+    }));
+  },
+
+  clearSessions() {
+    set({ sessions: [], currentSession: null });
   },
 }));

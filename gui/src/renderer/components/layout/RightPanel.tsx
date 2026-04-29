@@ -2,6 +2,7 @@ import React from 'react';
 import { X, ChevronDown, ChevronRight } from 'lucide-react';
 import { useUi } from '../../store/ui';
 import { ProcessList } from '../terminal/ProcessList';
+import { GlobPicker } from '../search/GlobPicker';
 
 function ToolCallPanel(): React.ReactElement {
   const selected = useUi((s) => s.selectedToolCall)!;
@@ -75,6 +76,8 @@ export function RightPanel(): React.ReactElement | null {
     content = <ToolCallPanel />;
   } else if (activeActivity === 'processes') {
     content = <ProcessList />;
+  } else if (activeActivity === 'search') {
+    content = <GlobPicker />;
   } else {
     content = (
       <div className="flex items-center justify-center h-full text-muted text-sm">

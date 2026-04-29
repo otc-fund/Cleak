@@ -2,6 +2,7 @@ import React from 'react';
 import { FileText, Search } from 'lucide-react';
 import { useSearch } from '../../store/search';
 import { useUi } from '../../store/ui';
+import { useEditor } from '../../store/editor';
 import { cn } from '../../lib/cn';
 
 const PROJECT_CWD = 'D:\\cleak2';
@@ -18,6 +19,15 @@ export function ToolSearch(): React.ReactElement {
     );
   }
 
+  function handleClick(path: string) {
+    void window.bridge.readFile(path).then((content: string) => {
+      useEditor.getState().openFile(path, content);
+    }).catch(() => {
+      useEditor.getState().openFile(path, '');
+    });
+    setMainTab('editor');
+  }
+
   return (
     <div className={cn('flex flex-col h-full')}>
       <div className="flex items-center gap-1.5 px-3 py-2 border-b border-border shrink-0">
@@ -29,7 +39,7 @@ export function ToolSearch(): React.ReactElement {
           <button
             key={p}
             className="flex items-center gap-1.5 w-full px-3 py-1 text-xs text-primary hover:bg-active transition-colors"
-            onClick={() => setMainTab('editor')}
+            onClick={() => handleClick(p)}
           >
             <FileText size={11} className="text-muted" />
             <span className="truncate">{p.replace(new RegExp('^' + PROJECT_CWD.replace(/\\/g, '\\\\') + '\\\\'), '')}</span>

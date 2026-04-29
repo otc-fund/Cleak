@@ -235,7 +235,7 @@ export const useChat = create<ChatState>((set) => ({
                 useSearch.setState({ globResults: results });
               }),
               import('../store/ui').then(({ useUi }) => {
-                useUi.getState().setActivity('search');
+                useUi.getState().setChatSideTab('search');
               }),
             ]);
           }

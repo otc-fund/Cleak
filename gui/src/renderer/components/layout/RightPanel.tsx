@@ -76,7 +76,7 @@ export function RightPanel(): React.ReactElement | null {
     content = <ToolCallPanel />;
   } else if (activeActivity === 'processes') {
     content = <ProcessList />;
-  } else if (activeActivity === 'search') {
+  } else if (activeActivity === 'chat' && useUi.getState().chatSideTab === 'search') {
     content = globResults.length > 0 ? <ToolSearch /> : <GlobPicker />;
   } else {
     content = (

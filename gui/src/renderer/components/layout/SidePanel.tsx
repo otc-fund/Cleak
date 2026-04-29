@@ -18,6 +18,34 @@ import { ContextUsageGrid } from '../context/ContextUsageGrid';
 import { useTasks } from '../../store/tasks';
 import { useAgents } from '../../store/agents';
 
+const CHAT_TABS: { id: import('../../store/ui').ChatSideTab; label: string }[] = [
+  { id: 'chat', label: 'Chat' },
+  { id: 'sessions', label: 'Sessions' },
+  { id: 'context', label: 'Context' },
+  { id: 'search', label: 'Search' },
+];
+
+function ChatSideTabs(): React.ReactElement {
+  const { chatSideTab, setChatSideTab } = useUi();
+  return (
+    <div className="flex items-center gap-0 px-2 pt-1 border-b border-border shrink-0">
+      {CHAT_TABS.map(({ id, label }) => (
+        <button
+          key={id}
+          onClick={() => setChatSideTab(id)}
+          className={`px-2 py-1 text-[10px] font-medium transition-colors rounded-t ${
+            chatSideTab === id
+              ? 'text-primary border-b-2 border-primary bg-active'
+              : 'text-muted hover:text-primary'
+          }`}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function PanelPlaceholder({ label }: { label: string }): React.ReactElement {
   return (
     <div className="flex items-center justify-center h-full text-muted text-sm">
@@ -26,30 +54,37 @@ function PanelPlaceholder({ label }: { label: string }): React.ReactElement {
   );
 }
 
-function PanelContent(): React.ReactElement {
+function SidePanelContent(): React.ReactElement {
   const { activeActivity } = useUi();
   const { tasks, activeTaskId } = useTasks();
   const { activeAgentId } = useAgents();
   switch (activeActivity) {
     case 'settings':   return <SettingsPanel />;
     case 'files':      return <FilePanel />;
-    case 'search':     return <GrepPanel />;
     case 'processes':  return <ProcessList />;
     case 'tasks':      return activeTaskId ? <TaskOutput /> : <TaskPanel />;
     case 'todos':      return <TodoPanel />;
     case 'agents':     return !activeAgentId ? <AgentDashboard /> : <AgentChat />;
-    case 'sessions':   return <SessionManager />;
     case 'scheduling': return <CronManager />;
     case 'memory':     return <MemoryBrowser />;
-    case 'context':    return <ContextUsageGrid />;
     case 'mcp':        return <PanelPlaceholder label="MCP Servers" />;
     case 'git':        return <PanelPlaceholder label="Git" />;
     default:           return <PanelPlaceholder label="Chat panel" />;
   }
 }
 
+function ChatSidePanelContent(): React.ReactElement {
+  const { chatSideTab } = useUi();
+  switch (chatSideTab) {
+    case 'chat':     return <SidePanelContent />;
+    case 'sessions': return <SessionManager />;
+    case 'context':  return <ContextUsageGrid />;
+    case 'search':   return <GrepPanel />;
+  }
+}
+
 export function SidePanel(): React.ReactElement | null {
-  const { sidePanelOpen } = useUi();
+  const { sidePanelOpen, activeActivity } = useUi();
   if (!sidePanelOpen) return null;
   return (
     <div
@@ -60,7 +95,8 @@ export function SidePanel(): React.ReactElement | null {
         borderRight: '1px solid var(--border)',
       }}
     >
-      <PanelContent />
+      {activeActivity === 'chat' && <ChatSideTabs />}
+      {activeActivity === 'chat' ? <ChatSidePanelContent /> : <SidePanelContent />}
     </div>
   );
 }

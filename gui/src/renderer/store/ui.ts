@@ -3,18 +3,17 @@ import { create } from 'zustand';
 export type Activity =
   | 'chat'
   | 'files'
-  | 'search'
   | 'processes'
   | 'tasks'
   | 'todos'
   | 'agents'
-  | 'sessions'
   | 'scheduling'
   | 'memory'
-  | 'context'
   | 'mcp'
   | 'git'
   | 'settings';
+
+export type ChatSideTab = 'chat' | 'sessions' | 'context' | 'search';
 
 export type MainTab = 'chat' | 'editor' | 'terminal';
 export type Theme = 'dark' | 'light' | 'high-contrast';
@@ -28,6 +27,8 @@ export interface ToolCallDetail {
 
 interface UiState {
   activeActivity: Activity;
+  /** Sub-tab within the chat side panel. */
+  chatSideTab: ChatSideTab;
   sidePanelOpen: boolean;
   rightPanelOpen: boolean;
   activeMainTab: MainTab;
@@ -35,6 +36,7 @@ interface UiState {
   selectedToolCall: ToolCallDetail | null;
   planMode: boolean;
   setActivity(a: Activity): void;
+  setChatSideTab(t: ChatSideTab): void;
   setSidePanelOpen(open: boolean): void;
   setRightPanelOpen(open: boolean): void;
   setMainTab(tab: MainTab): void;
@@ -45,6 +47,7 @@ interface UiState {
 
 export const useUi = create<UiState>((set, get) => ({
   activeActivity: 'chat',
+  chatSideTab: 'chat',
   sidePanelOpen: true,
   rightPanelOpen: false,
   activeMainTab: 'chat',
@@ -57,11 +60,11 @@ export const useUi = create<UiState>((set, get) => ({
     if (a === activeActivity) {
       set({ sidePanelOpen: !sidePanelOpen });
     } else {
-      // Activities that require the right panel to be visible
       const opensRight: Activity[] = ['tasks', 'todos'];
-      set({ activeActivity: a, sidePanelOpen: true, rightPanelOpen: opensRight.includes(a) });
+      set({ activeActivity: a, chatSideTab: 'chat', sidePanelOpen: true, rightPanelOpen: opensRight.includes(a) });
     }
   },
+  setChatSideTab: (t) => set({ chatSideTab: t, sidePanelOpen: true }),
   setSidePanelOpen: (open) => set({ sidePanelOpen: open }),
   setRightPanelOpen: (open) => set({ rightPanelOpen: open }),
   setMainTab: (tab) => set({ activeMainTab: tab }),

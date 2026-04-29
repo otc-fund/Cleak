@@ -2,6 +2,11 @@ import React from 'react';
 import { X, ChevronDown, ChevronRight } from 'lucide-react';
 import { useUi } from '../../store/ui';
 import { ProcessList } from '../terminal/ProcessList';
+import { TodoPanel } from '../todos/TodoPanel';
+import { TaskPanel } from '../tasks/TaskPanel';
+import { TaskOutput } from '../tasks/TaskOutput';
+import { useTasks } from '../../store/tasks';
+import { useTodos } from '../../store/todos';
 
 function ToolCallPanel(): React.ReactElement {
   const selected = useUi((s) => s.selectedToolCall)!;
@@ -68,6 +73,8 @@ function ToolCallPanel(): React.ReactElement {
 
 export function RightPanel(): React.ReactElement | null {
   const { rightPanelOpen, selectedToolCall, activeActivity } = useUi();
+  const { tasks, activeTaskId } = useTasks();
+  const { todos } = useTodos();
   if (!rightPanelOpen) return null;
 
   let content: React.ReactNode;
@@ -75,6 +82,12 @@ export function RightPanel(): React.ReactElement | null {
     content = <ToolCallPanel />;
   } else if (activeActivity === 'processes') {
     content = <ProcessList />;
+  } else if (activeActivity === 'tasks') {
+    content = activeTaskId ? <TaskOutput /> : <TaskPanel />;
+  } else if (todos.length > 0) {
+    content = <TodoPanel />;
+  } else if (tasks.length > 0) {
+    content = activeTaskId ? <TaskOutput /> : <TaskPanel />;
   } else {
     content = (
       <div className="flex items-center justify-center h-full text-muted text-sm">

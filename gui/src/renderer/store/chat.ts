@@ -5,7 +5,7 @@ import type { CleakInboundFrame } from '../../main/cleakProtocol';
 export type TextBlock = { type: 'text'; text: string };
 export type ThinkingBlock = { type: 'thinking'; thinking: string };
 export type ToolUseBlock = { type: 'tool_use'; id: string; name: string; input: unknown };
-export type ToolResultBlock = { type: 'tool_result'; tool_use_id: string; content: unknown; is_error?: boolean };
+export type ToolResultBlock = { type: 'tool_result'; tool_use_id: string; tool_name?: string; content: unknown; is_error?: boolean };
 export type ContentBlock = TextBlock | ThinkingBlock | ToolUseBlock | ToolResultBlock;
 
 export interface ChatMessage {
@@ -39,7 +39,7 @@ function extractBlocks(frame: CleakInboundFrame): ContentBlock[] {
         case 'text':    return { type: 'text' as const, text: block.text };
         case 'thinking': return { type: 'thinking' as const, thinking: block.thinking };
         case 'tool_use': return { type: 'tool_use' as const, id: block.id, name: block.name, input: block.input };
-        case 'tool_result': return { type: 'tool_result' as const, tool_use_id: block.tool_use_id, content: block.content, is_error: block.is_error };
+        case 'tool_result': return { type: 'tool_result' as const, tool_use_id: block.tool_use_id, tool_name: block.tool_name, content: block.content, is_error: block.is_error };
         default: return { type: 'text' as const, text: JSON.stringify(block) };
       }
     });
@@ -70,6 +70,7 @@ interface ChatState {
   errors: string[];
   cost: CostData | null;
   agentTerminalMap: Map<string, string>;
+  agentToolNameMap: Map<string, string>;
   appendUser(text: string): void;
   ingestFrame(frame: CleakInboundFrame): void;
   setStatus(s: BridgeStatus): void;
@@ -114,10 +115,23 @@ export const useChat = create<ChatState>((set) => ({
 
   // Map tool_use id → terminal id for agent BashTool/PowerShellTool routing
   agentTerminalMap: new Map<string, string>(),
+  // Map tool_use id → tool name for result routing
+  agentToolNameMap: new Map<string, string>(),
 
   ingestFrame(frame) {
     const rlog = (...args: unknown[]) => { if (typeof window !== 'undefined' && window.bridge?.rendererLog) window.bridge.rendererLog('[chat]', ...args.map(a => typeof a === 'string' ? a : JSON.stringify(a))); };
     const raw = frame as any;
+
+    // Detect plan mode entry/exit
+    if (raw.type === 'enter_plan_mode' || raw.type === 'EnterPlanMode') {
+      import('../store/ui').then(({ useUi }) => useUi.getState().setPlanMode(true));
+      return;
+    }
+    if (raw.type === 'exit_plan_mode' || raw.type === 'ExitPlanMode' || raw.type === 'ExitPlanModeV2') {
+      import('../store/ui').then(({ useUi }) => useUi.getState().setPlanMode(false));
+      return;
+    }
+
     if (frame.type === 'result') {
       rlog('result frame, top-level keys:', Object.keys(raw).join(','), 'result:', raw.result);
     }
@@ -136,6 +150,10 @@ export const useChat = create<ChatState>((set) => ({
       };
       for (const block of blocks) {
         if (block.type === 'tool_use') {
+          // Track tool name for result routing
+          const state = useChat.getState();
+          state.agentToolNameMap.set(block.id, block.name);
+
           const kind = FILE_TOOLS[block.name];
           if (kind) {
             const input = block.input as Record<string, unknown>;
@@ -166,6 +184,8 @@ export const useChat = create<ChatState>((set) => ({
         // When tool_result arrives, route output to the terminal
         if (block.type === 'tool_result') {
           const state = useChat.getState();
+          // Look up tool name from the tool_use that was sent earlier
+          const toolName = state.agentToolNameMap.get(block.tool_use_id) ?? block.tool_name;
           const termId = state.agentTerminalMap.get(block.tool_use_id);
           if (termId) {
             const output = typeof block.content === 'string'
@@ -178,6 +198,67 @@ export const useChat = create<ChatState>((set) => ({
             });
             state.agentTerminalMap.delete(block.tool_use_id);
           }
+
+          // Sync TodoWriteTool results to todos store
+          if (toolName === 'TodoWriteTool') {
+            try {
+              const todos = typeof block.content === 'string'
+                ? JSON.parse(block.content)
+                : block.content;
+              if (Array.isArray(todos)) {
+                import('../store/todos').then(({ useTodos }) => {
+                  useTodos.getState().setTodos(todos);
+                });
+              }
+            } catch { /* ignore parse errors */ }
+          }
+
+          // Handle TaskTool / TaskOutputTool / TaskStopTool results
+          if (toolName === 'TaskTool') {
+            try {
+              const data = typeof block.content === 'string'
+                ? JSON.parse(block.content)
+                : block.content;
+              if (data && typeof data === 'object') {
+                import('../store/tasks').then(({ useTasks }) => {
+                  if (data.action === 'register' && data.id && data.name) {
+                    useTasks.getState().registerTask(data.id, data.name, data.parentId);
+                  } else if (data.action === 'update' && data.id && data.status) {
+                    useTasks.getState().updateStatus(data.id, data.status, data.error);
+                  }
+                });
+              }
+            } catch { /* ignore parse errors */ }
+          }
+
+          if (toolName === 'TaskOutputTool') {
+            try {
+              const data = typeof block.content === 'string'
+                ? JSON.parse(block.content)
+                : block.content;
+              if (data && typeof data === 'object' && data.taskId && data.text) {
+                import('../store/tasks').then(({ useTasks }) => {
+                  useTasks.getState().appendOutput(data.taskId, data.text);
+                });
+              }
+            } catch { /* ignore parse errors */ }
+          }
+
+          if (toolName === 'TaskStopTool') {
+            try {
+              const data = typeof block.content === 'string'
+                ? JSON.parse(block.content)
+                : block.content;
+              if (data && typeof data === 'object' && data.taskId && data.status) {
+                import('../store/tasks').then(({ useTasks }) => {
+                  useTasks.getState().updateStatus(data.taskId, data.status, data.error);
+                });
+              }
+            } catch { /* ignore parse errors */ }
+          }
+
+          // Clean up the tool name mapping
+          state.agentToolNameMap.delete(block.tool_use_id);
         }
       }
 

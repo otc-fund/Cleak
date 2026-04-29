@@ -15,6 +15,7 @@ const ToolUseBlock = z.object({
 const ToolResultBlock = z.object({
   type: z.literal('tool_result'),
   tool_use_id: z.string(),
+  tool_name: z.string().optional(),
   content: z.unknown(),
   is_error: z.boolean().optional(),
 });

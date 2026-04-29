@@ -70,6 +70,7 @@ interface ChatState {
   errors: string[];
   cost: CostData | null;
   agentTerminalMap: Map<string, string>;
+  agentToolNameMap: Map<string, string>;
   appendUser(text: string): void;
   ingestFrame(frame: CleakInboundFrame): void;
   setStatus(s: BridgeStatus): void;
@@ -114,6 +115,8 @@ export const useChat = create<ChatState>((set) => ({
 
   // Map tool_use id → terminal id for agent BashTool/PowerShellTool routing
   agentTerminalMap: new Map<string, string>(),
+  // Map tool_use id → tool name for GlobTool result routing
+  agentToolNameMap: new Map<string, string>(),
 
   ingestFrame(frame) {
     const rlog = (...args: unknown[]) => { if (typeof window !== 'undefined' && window.bridge?.rendererLog) window.bridge.rendererLog('[chat]', ...args.map(a => typeof a === 'string' ? a : JSON.stringify(a))); };
@@ -161,6 +164,12 @@ export const useChat = create<ChatState>((set) => ({
               state.agentTerminalMap.set(block.id, termId);
             });
           }
+
+          // Track GlobTool/GrepTool names for result routing
+          if (block.name.includes('Glob') || block.name.includes('Grep')) {
+            const state = useChat.getState();
+            state.agentToolNameMap.set(block.id, block.name);
+          }
         }
 
         // When tool_result arrives, route output to the terminal
@@ -177,6 +186,25 @@ export const useChat = create<ChatState>((set) => ({
               useTerminals.getState().setActive(termId);
             });
             state.agentTerminalMap.delete(block.tool_use_id);
+          }
+
+          // Route GlobTool results to the search store
+          const toolName = state.agentToolNameMap.get(block.tool_use_id);
+          if (toolName) {
+            const results = typeof block.content === 'string'
+              ? block.content.split('\n').filter(Boolean)
+              : Array.isArray(block.content)
+                ? block.content.map((x: unknown) => String(x))
+                : [];
+            Promise.all([
+              import('../store/search').then(({ useSearch }) => {
+                useSearch.setState({ globResults: results });
+              }),
+              import('../store/ui').then(({ useUi }) => {
+                useUi.getState().setActivity('search');
+              }),
+            ]);
+            state.agentToolNameMap.delete(block.tool_use_id);
           }
         }
       }

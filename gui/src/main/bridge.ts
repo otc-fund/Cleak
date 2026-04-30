@@ -18,6 +18,8 @@ export interface BridgeOptions {
   claudeBin: string;
   bypassPermissions?: boolean;
   restart?: { maxAttempts: number; baseDelayMs: number };
+  /** Compact context summary to prime the session — injected as first stdin message. */
+  contextPriming?: string;
 }
 
 export class CleakBridge extends EventEmitter {
@@ -77,7 +79,15 @@ export class CleakBridge extends EventEmitter {
 
     // Initial stdin nudge — some stream-json implementations need a first write
     setTimeout(() => {
-      if (child.stdin && !child.killed) child.stdin.write('\n');
+      if (child.stdin && !child.killed) {
+        child.stdin.write('\n');
+        // Context priming: inject a compact session summary to restore continuity
+        // without loading the full conversation history (prevents context bloat)
+        if (this.opts.contextPriming) {
+          const primingFrame = buildUserFrame(this.opts.contextPriming);
+          child.stdin.write(JSON.stringify(primingFrame) + '\n');
+        }
+      }
     }, 500);
 
     // 5-second alive check — if process is silent, try stdin nudge
@@ -89,7 +99,7 @@ export class CleakBridge extends EventEmitter {
 
     child.on('error', (err) => {
       this.emit('error', { message: `spawn error: ${err.message}` });
-      this.handleExit(-1);
+      if (this.child === child) this.handleExit(-1);
     });
     child.stdout?.on('data', (b: Buffer) => this.splitter.feed(b));
     child.stderr?.on('data', (b: Buffer) => {
@@ -102,6 +112,7 @@ export class CleakBridge extends EventEmitter {
     });
     child.on('exit', (code, signal) => {
       if (this.readyTimeout) { clearTimeout(this.readyTimeout); this.readyTimeout = null; }
+      if (this.child !== child) return; // A newer child was spawned — ignore stale exit
       this.handleExit(code ?? -1);
     });
 

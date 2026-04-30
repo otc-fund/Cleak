@@ -9,9 +9,14 @@
     "preview": "electron-vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "electron:build": "npm run build && electron-builder",
+    "electron:build:portable": "npm run build && electron-builder --win portable",
+    "test:e2e": "playwright test",
+    "test:all": "npm test && npm run test:e2e"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "@tailwindcss/typography": "^0.5.19",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
@@ -38,6 +43,7 @@
     "@xterm/xterm": "^6.0.0",
     "chokidar": "^3.6.0",
     "clsx": "^2.1.1",
+    "electron-updater": "^6.8.3",
     "fast-glob": "^3.3.3",
     "fuse.js": "^7.3.0",
     "highlight.js": "^11.11.1",

@@ -1,40 +1,58 @@
-# Cleak GUI
+# Cleak Desktop GUI
 
-Electron desktop GUI for the cleak coding assistant.
+A VS-Code-style desktop interface for the cleak coding assistant.
 
 ## Prerequisites
-- Node.js 20+
-- A locally-installed Claude Code CLI (`claude.exe`) used as the SDK backend
-- A running OpenAI-compatible endpoint at `http://localhost:3003/v1` serving `qwen3.6-plus`
 
-## Setup
+- Node.js >= 20
+- Bun (for the cleak backend)
+- Windows 10+ (primary), macOS/Linux supported but installers not distributed
+
+## Development
+
 ```bash
 cd gui
 npm install
-cp .env.example .env  # then edit ANTHROPIC_API_KEY and CLAUDE_BIN if needed
-npm run dev
+npm run dev        # Start Electron in dev mode with Vite HMR
+npm test           # Run unit tests
+npm run typecheck  # Type check
+npm run test:e2e   # Run Playwright E2E tests
 ```
 
-## Layout
-- `src/main` — Electron main process, owns the SDK child
-- `src/preload` — exposes a typed bridge to the renderer
-- `src/renderer` — React UI
-- `tests` — Vitest unit tests
+## Build
 
-## Sprint 1 status (foundation)
+```bash
+npm run electron:build          # NSIS installer + portable
+npm run electron:build:portable  # Portable only
+```
 
-- ✅ Electron + Vite + TypeScript scaffold
-- ✅ NDJSON line splitter (partial-line buffering, error recovery)
-- ✅ Cleak stream-json Zod schemas (system / assistant / user / result)
-- ✅ Anthropic→OpenAI translation shim (streaming + non-streaming)
-- ✅ SDK child spawn (`claude.exe`) + auto-restart with exponential backoff
-- ✅ IPC bridge to renderer via contextBridge
-- ✅ Minimal chat UI with streaming display
-- ✅ Status bar with bridge state and model info
-- ✅ Smoke test: Electron window opens, `claude.exe` spawns, API responds
+Output: `gui/dist/`
 
-### Known limits (addressed in future sprints)
-- Permissions bypassed (`--permission-mode bypassPermissions`); real permission UI → S10
-- API key stored in plain `.env`; secure keychain → S2
-- No markdown / code blocks / thinking blocks / tool-call rendering → S3
-- Single chat column; no sidebar, file browser, terminal, MCP → S3–S17
+## Architecture
+
+- **Main process**: Electron main, cleak bridge, pty manager, file watcher
+- **Renderer**: React 18 + Vite + TypeScript, Zustand state, Monaco editor, xterm.js terminal
+- **IPC**: NDJSON over stdio for cleak bridge; Electron IPC for pty/file/search
+
+## Sprints
+
+| Sprint | Feature | Tag |
+|--------|---------|-----|
+| S1 | Foundation: bridge + skeleton | `gui-s1` |
+| S2 | App shell | `gui-s2` |
+| S3 | Chat & tool-call rendering | `gui-s3` |
+| S4 | Files & editor | `gui-s4` |
+| S5 | Terminal & processes | `gui-s5` |
+| S6 | Search & navigation | `gui-s6` |
+| S7 | Tasks, todos, plan mode | `gui-s7` |
+| S8 | Agents & swarms | `gui-s8` |
+| S9 | MCP | `gui-s9` |
+| S10 | Permissions & security | `gui-s10` |
+| S11 | Slash commands & skills | `gui-s11` |
+| S12 | Git & worktrees | `gui-s12` |
+| S13 | LSP & advanced editor | `gui-s13` |
+| S14 | Web tools | `gui-s14` |
+| S15 | Voice, vim, keybindings | `gui-s15` |
+| S16 | Sessions, scheduling | `gui-s16` |
+| S17 | Windows-specific & plugins | `gui-s17` |
+| S18 | Polish, packaging, ship | `gui-s18` |

@@ -27,6 +27,12 @@ export const IpcChannels = {
   loadSettings:     'settings:load',
   saveSettings:     'settings:save',
   rendererLog:      'renderer:log',
+  newSession:       'bridge:newSession',
+  restartBridge:    'bridge:restart',
+  createNewSession: 'bridge:createNewSession',
+  activateSession:  'bridge:activateSession',
+  remember:         'remember:write',
+  getMemory:        'remember:get',
 } as const;
 
 export type IpcChannel = (typeof IpcChannels)[keyof typeof IpcChannels];
@@ -54,6 +60,10 @@ export const SessionIpcChannels = {
   save:    'sessions:save',
   delete:  'sessions:delete',
   update:  'sessions:update',
+  saveMessages: 'sessions:saveMessages',
+  loadMessages: 'sessions:loadMessages',
+  deleteMessages: 'sessions:deleteMessages',
+  listSessionIds: 'sessions:listSessionIds',
 } as const;
 
 export const SearchIpcChannels = {

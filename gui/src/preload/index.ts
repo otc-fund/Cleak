@@ -89,6 +89,34 @@ const api = {
   updateSession(id: string, patch: Record<string, unknown>): Promise<void> {
     return ipcRenderer.invoke(SessionIpcChannels.update, id, patch) as Promise<void>;
   },
+  saveSessionMessages(sessionId: string, messages: unknown[]): Promise<void> {
+    return ipcRenderer.invoke(SessionIpcChannels.saveMessages, sessionId, messages) as Promise<void>;
+  },
+  loadSessionMessages(sessionId: string): Promise<unknown[]> {
+    return ipcRenderer.invoke(SessionIpcChannels.loadMessages, sessionId) as Promise<unknown[]>;
+  },
+  restartBridge(): Promise<void> {
+    return ipcRenderer.invoke(IpcChannels.restartBridge) as Promise<void>;
+  },
+  deleteSessionMessages(id: string): Promise<void> {
+    return ipcRenderer.invoke(SessionIpcChannels.deleteMessages, id) as Promise<void>;
+  },
+  listSessionIds(): Promise<string[]> {
+    return ipcRenderer.invoke(SessionIpcChannels.listSessionIds) as Promise<string[]>;
+  },
+  createNewSession(): Promise<string> {
+    return ipcRenderer.invoke(IpcChannels.createNewSession) as Promise<string>;
+  },
+  activateSession(sessionId: string): Promise<void> {
+    return ipcRenderer.invoke(IpcChannels.activateSession, sessionId) as Promise<void>;
+  },
+  // Remember
+  remember(content: string): Promise<void> {
+    return ipcRenderer.invoke(IpcChannels.remember, content) as Promise<void>;
+  },
+  getMemory(): Promise<string | null> {
+    return ipcRenderer.invoke(IpcChannels.getMemory) as Promise<string | null>;
+  },
 };
 
 export type BridgeApi = typeof api;

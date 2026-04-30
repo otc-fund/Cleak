@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { Plus, Pin, PinOff, Trash2, Pencil } from 'lucide-react';
 import { useSessions } from '../../store/sessions';
+import { switchSession, restartBridgeForNewSession } from '../../lib/bridge';
 
 function SectionHeader({ label }: { label: string }): React.ReactElement {
   return <div className="px-3 pt-3 pb-1 text-[11px] font-medium text-muted">{label}</div>;
@@ -94,10 +95,18 @@ function SessionRow({
 }
 
 export function SessionManager(): React.ReactElement {
-  const { sessions, loadSessions, currentSession, selectSession, togglePin, deleteSession, renameSession } = useSessions();
+  const { sessions, loadSessions, currentSession, selectSessionInList, togglePin, deleteSession, renameSession } = useSessions();
   const [query, setQuery] = React.useState('');
 
   useEffect(() => { void loadSessions(); }, []);
+
+  async function handleNewSession() {
+    await restartBridgeForNewSession();
+  }
+
+  async function handleSelectSession(id: string) {
+    await switchSession(id);
+  }
 
   const filtered = query
     ? sessions.filter(s => s.name.toLowerCase().includes(query.toLowerCase()))
@@ -109,7 +118,7 @@ export function SessionManager(): React.ReactElement {
   return (
     <div className="flex flex-col h-full">
       <div className="px-2 py-1.5 border-b border-border shrink-0">
-        <button className="flex items-center gap-2 w-full px-2 py-1.5 text-sm text-primary bg-hover rounded hover:bg-active transition-colors">
+        <button className="flex items-center gap-2 w-full px-2 py-1.5 text-sm text-primary bg-hover rounded hover:bg-active transition-colors" onClick={handleNewSession}>
           <Plus size={14} />
           <span>New session</span>
         </button>
@@ -135,7 +144,7 @@ export function SessionManager(): React.ReactElement {
                 name={s.name}
                 active={s.id === currentSession?.id}
                 pinned={s.pinned}
-                onClick={() => selectSession(s.id)}
+                onClick={() => void handleSelectSession(s.id)}
                 onPin={() => togglePin(s.id)}
                 onDelete={() => void deleteSession(s.id)}
                 onRename={(n) => renameSession(s.id, n)}
@@ -154,7 +163,7 @@ export function SessionManager(): React.ReactElement {
             name={s.name}
             active={s.id === currentSession?.id}
             pinned={s.pinned}
-            onClick={() => selectSession(s.id)}
+            onClick={() => void handleSelectSession(s.id)}
             onPin={() => togglePin(s.id)}
             onDelete={() => void deleteSession(s.id)}
             onRename={(n) => renameSession(s.id, n)}

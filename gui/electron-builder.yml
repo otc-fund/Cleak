@@ -1,0 +1,27 @@
+appId: com.cleak.gui
+productName: Cleak
+directories:
+  output: dist
+  buildResources: build
+
+files:
+  - out/**/*
+  - node_modules/**/*
+  - package.json
+
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: portable
+      arch: [x64]
+
+nsis:
+  oneClick: false
+  perMachine: true
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+
+portable:
+  unpackDirName: Cleak

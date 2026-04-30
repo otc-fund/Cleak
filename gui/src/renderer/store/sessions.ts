@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { PersistedSession } from '../../main/sessionsStore';
+import type { ChatMessage } from './chat';
 
 export type Session = PersistedSession;
 
@@ -9,13 +10,18 @@ interface SessionState {
   loadSessions(): Promise<void>;
   createSession(id: string, name?: string): void;
   renameSession(id: string, name: string): void;
-  selectSession(id: string): void;
+  /** Just updates currentSession in the list — use switchSession() for the full flow. */
+  selectSessionInList(id: string): void;
   deleteSession(id: string): Promise<void>;
   exportSession(id: string): void;
   importSession(file: File): Promise<void>;
   syncSession(sessionId: string): void;
   togglePin(id: string): void;
   clearSessions(): void;
+  /** Persist messages for the given session (debounced). */
+  persistMessages(sessionId: string, messages: ChatMessage[]): void;
+  /** Load messages for the given session. */
+  loadMessages(sessionId: string): Promise<ChatMessage[]>;
 }
 
 const bridge = typeof window !== 'undefined' ? (window as any).bridge : undefined;
@@ -87,11 +93,13 @@ export const useSessions = create<SessionState>((set) => ({
     }, 2000);
   },
 
-  selectSession(id) {
+  selectSessionInList(id) {
     set(s => ({
-      currentSession: s.sessions.find(s => s.id === id) ?? null,
+      currentSession: s.sessions.find(sess => sess.id === id) ?? null,
+      sessions: s.sessions.map(sess =>
+        sess.id === id ? { ...sess, lastActive: Date.now() } : sess,
+      ),
     }));
-    // Send session switch to bridge
   },
 
   async deleteSession(id) {
@@ -99,6 +107,12 @@ export const useSessions = create<SessionState>((set) => ({
       sessions: s.sessions.filter(s => s.id !== id),
       currentSession: s.currentSession?.id === id ? null : s.currentSession,
     }));
+    // Delete from disk and from chat store if currently viewed
+    void bridge?.deleteSessionMessages?.(id);
+    const chatState = await import('./chat');
+    if (chatState.useChat.getState().activeSessionId === id) {
+      chatState.useChat.getState().resetForNewSession();
+    }
     await ipcDelete(id);
   },
 
@@ -123,5 +137,17 @@ export const useSessions = create<SessionState>((set) => ({
 
   clearSessions() {
     set({ sessions: [], currentSession: null });
+  },
+
+  persistMessages(sessionId, messages) {
+    if (!sessionId) return;
+    setTimeout(() => {
+      void bridge?.saveSessionMessages(sessionId, messages);
+    }, 1000);
+  },
+
+  async loadMessages(sessionId) {
+    const raw = await bridge?.loadSessionMessages(sessionId) as unknown;
+    return (raw ?? []) as ChatMessage[];
   },
 }));

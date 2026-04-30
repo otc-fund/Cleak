@@ -8,19 +8,19 @@ describe('useSessions', () => {
     expect(s.currentSession).toBeNull();
   });
 
-  it('selectSession sets currentSession from sessions list', () => {
+  it('selectSessionInList sets currentSession from sessions list', () => {
     useSessions.setState({
       sessions: [
         { id: 'a', name: 'Project A', createdAt: 1, lastActive: 2, messageCount: 5, tokenCount: 1000, cost: 0.01 },
         { id: 'b', name: 'Project B', createdAt: 3, lastActive: 4, messageCount: 10, tokenCount: 2000, cost: 0.02 },
       ],
     });
-    useSessions.getState().selectSession('b');
+    useSessions.getState().selectSessionInList('b');
     expect(useSessions.getState().currentSession?.id).toBe('b');
   });
 
-  it('selectSession sets null for unknown id', () => {
-    useSessions.getState().selectSession('unknown');
+  it('selectSessionInList sets null for unknown id', () => {
+    useSessions.getState().selectSessionInList('unknown');
     expect(useSessions.getState().currentSession).toBeNull();
   });
 

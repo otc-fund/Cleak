@@ -15,6 +15,10 @@ export interface ChatMessage {
   pending: boolean;
   ts: number;
   sessionId?: string;
+  /** JSONL entry UUID — same as id for new messages. */
+  uuid?: string;
+  /** Parent entry in conversation tree — null for user entries (roots). */
+  parentUuid?: string | null;
 }
 
 export interface CostData {
@@ -26,6 +30,9 @@ export interface CostData {
 }
 
 function nextId(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
   return Math.random().toString(36).slice(2);
 }
 
@@ -73,10 +80,22 @@ interface ChatState {
   agentToolNameMap: Map<string, string>;
   /** Text from the first user message, used as initial session name. */
   pendingSessionName: string | null;
+  /** Claude's internal session_id from the bridge. Frames with a different session_id are ignored. */
+  activeSessionId: string | null;
+  /** When true, all incoming frames are dropped — used during bridge restarts to prevent stale frame leakage. */
+  framesBlocked: boolean;
   appendUser(text: string): void;
   ingestFrame(frame: CleakInboundFrame): void;
   setStatus(s: BridgeStatus): void;
   pushError(message: string): void;
+  /** Clear messages and state when starting a new session. */
+  resetForNewSession(): void;
+  /** Set the active session so only matching frames are processed. */
+  setActiveSessionId(id: string | null): void;
+  /** Block or unblock incoming frames. */
+  setFramesBlocked(blocked: boolean): void;
+  /** Atomically set messages and activeSessionId for a session switch, then unblock frames. */
+  setStateForSession(messages: ChatMessage[], sessionId: string | null): void;
 }
 
 function extractCost(frame: Record<string, unknown>): CostData {
@@ -105,6 +124,8 @@ export const useChat = create<ChatState>((set) => ({
   errors: [],
   cost: null,
   pendingSessionName: null,
+  activeSessionId: null,
+  framesBlocked: false,
 
   appendUser(text) {
     const pendingName = text.trim().length > 50 ? text.trim().slice(0, 47) + '...' : text.trim();
@@ -137,18 +158,27 @@ export const useChat = create<ChatState>((set) => ({
       return;
     }
 
+    // Drop all frames during bridge restart / session switch
+    if (useChat.getState().framesBlocked) {
+      rlog('frames blocked, dropping frame:', frame.type);
+      return;
+    }
+
     if (frame.type === 'result') {
       rlog('result frame, top-level keys:', Object.keys(raw).join(','), 'result:', raw.result);
     }
     if (frame.type === 'assistant') {
       const raw2 = frame as any;
       const sid = raw2.session_id;
-      rlog('assistant frame, session_id:', sid, 'raw keys:', Object.keys(raw2).join(','), 'content type:', typeof raw2.message?.content, 'preview:', JSON.stringify(raw2.message?.content)?.slice(0, 200));
-      const blocks = extractBlocks(frame);
 
-      // Create session on first assistant frame with a session_id (before blocks check)
+      // When a session_id arrives from the bridge, tag all untagged messages
+      // with it so they stay grouped together and separate from other sessions.
       if (sid) {
         const name = useChat.getState().pendingSessionName;
+        set((s) => ({
+          activeSessionId: s.activeSessionId ?? sid,
+          messages: s.messages.map(m => m.sessionId ? m : { ...m, sessionId: sid }),
+        }));
         import('../store/sessions').then(({ useSessions }) => {
           const sessState = useSessions.getState();
           const exists = sessState.sessions.some(s => s.id === sid);
@@ -160,7 +190,8 @@ export const useChat = create<ChatState>((set) => ({
         });
       }
 
-      if (blocks.length === 0) return;
+      rlog('assistant frame, session_id:', sid, 'raw keys:', Object.keys(raw2).join(','), 'content type:', typeof raw2.message?.content);
+      const blocks = extractBlocks(frame);
 
       // Emit highlights for file-related tool calls
       const FILE_TOOLS: Record<string, 'read' | 'edit'> = {
@@ -420,7 +451,9 @@ export const useChat = create<ChatState>((set) => ({
           rlog('after append, blocks:', JSON.stringify(newBlocks));
           msgs[msgs.length - 1] = { ...tail, blocks: newBlocks };
         } else {
-          msgs.push({ id: nextId(), role: 'assistant', blocks, pending: true, ts: Date.now(), sessionId: frame.session_id });
+          const id = nextId();
+          const parentUuid = [...msgs].reverse().find((m: ChatMessage) => m.role === 'user')?.id ?? null;
+          msgs.push({ id, role: 'assistant', blocks, pending: true, ts: Date.now(), sessionId: frame.session_id, uuid: id, parentUuid });
           rlog('new assistant msg, blocks:', JSON.stringify(blocks));
         }
         return { messages: msgs };
@@ -468,5 +501,26 @@ export const useChat = create<ChatState>((set) => ({
 
   pushError(message) {
     set((s) => ({ errors: [...s.errors.slice(-19), message] }));
+  },
+
+  resetForNewSession() {
+    set({ messages: [], pendingSessionName: null, activeSessionId: null, framesBlocked: false, cost: null, agentTerminalMap: new Map(), agentToolNameMap: new Map() });
+  },
+
+  setActiveSessionId(id) {
+    set({ activeSessionId: id });
+  },
+
+  setFramesBlocked(blocked) {
+    set({ framesBlocked: blocked });
+  },
+
+  /** Atomically set messages and activeSessionId for a session switch.
+   *  Retags all loaded messages with the current session ID so they pass the ChatView filter. */
+  setStateForSession(messages: ChatMessage[], sessionId: string | null) {
+    const retagged = sessionId
+      ? messages.map(m => ({ ...m, sessionId }))
+      : messages;
+    set({ messages: retagged, pendingSessionName: null, activeSessionId: sessionId, framesBlocked: false });
   },
 }));

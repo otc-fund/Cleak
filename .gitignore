@@ -1,0 +1,45 @@
+# ── Dependencies & build output ──
+node_modules/
+dist/
+out/
+.vite/
+
+# ── Environment & secrets ──
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# ── Claude & AI tooling ──
+.claude/
+.remember/
+.prompt/
+prompt/
+superpowers/
+
+# ── Git worktrees ──
+.worktrees/
+
+# ── Testing & debugging ──
+.playwright-mcp/
+*.log
+
+# ── Editor / OS ──
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# ── Dev artifacts ──
+cleak/
+workspace/
+session.md
+GUI_PROMPT.md
+*.png
+*.jpg
+*.gif
+
+# ── Docs (internal planning) ──
+docs/prompts/
+docs/superpowers/

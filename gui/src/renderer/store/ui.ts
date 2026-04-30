@@ -13,7 +13,7 @@ export type Activity =
   | 'git'
   | 'settings';
 
-export type ChatSideTab = 'chat' | 'sessions' | 'context' | 'search';
+export type ChatSideTab = 'sessions' | 'context' | 'search';
 
 export type MainTab = 'chat' | 'editor' | 'terminal';
 export type Theme = 'dark' | 'light' | 'high-contrast';
@@ -47,7 +47,7 @@ interface UiState {
 
 export const useUi = create<UiState>((set, get) => ({
   activeActivity: 'chat',
-  chatSideTab: 'chat',
+  chatSideTab: 'sessions',
   sidePanelOpen: true,
   rightPanelOpen: false,
   activeMainTab: 'chat',
@@ -61,7 +61,7 @@ export const useUi = create<UiState>((set, get) => ({
       set({ sidePanelOpen: !sidePanelOpen });
     } else {
       const opensRight: Activity[] = ['tasks', 'todos'];
-      set({ activeActivity: a, chatSideTab: 'chat', sidePanelOpen: true, rightPanelOpen: opensRight.includes(a) });
+      set({ activeActivity: a, chatSideTab: 'sessions', sidePanelOpen: true, rightPanelOpen: opensRight.includes(a) });
     }
   },
   setChatSideTab: (t) => set({ chatSideTab: t, sidePanelOpen: true }),

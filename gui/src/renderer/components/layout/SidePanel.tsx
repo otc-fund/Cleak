@@ -11,40 +11,10 @@ import { AgentDashboard } from '../agents/AgentDashboard';
 import { AgentChat } from '../agents/AgentChat';
 import { SessionManager } from '../sessions/SessionManager';
 import { CronManager } from '../scheduling/CronManager';
-import { MonitorList } from '../scheduling/MonitorList';
-import { RemotePanel } from '../scheduling/RemotePanel';
 import { MemoryBrowser } from '../memory/MemoryBrowser';
 import { ContextUsageGrid } from '../context/ContextUsageGrid';
 import { useTasks } from '../../store/tasks';
 import { useAgents } from '../../store/agents';
-
-const CHAT_TABS: { id: import('../../store/ui').ChatSideTab; label: string }[] = [
-  { id: 'chat', label: 'Chat' },
-  { id: 'sessions', label: 'Sessions' },
-  { id: 'context', label: 'Context' },
-  { id: 'search', label: 'Search' },
-];
-
-function ChatSideTabs(): React.ReactElement {
-  const { chatSideTab, setChatSideTab } = useUi();
-  return (
-    <div className="flex items-center gap-0 px-2 pt-1 border-b border-border shrink-0">
-      {CHAT_TABS.map(({ id, label }) => (
-        <button
-          key={id}
-          onClick={() => setChatSideTab(id)}
-          className={`px-2 py-1 text-[10px] font-medium transition-colors rounded-t ${
-            chatSideTab === id
-              ? 'text-primary border-b-2 border-primary bg-active'
-              : 'text-muted hover:text-primary'
-          }`}
-        >
-          {label}
-        </button>
-      ))}
-    </div>
-  );
-}
 
 function PanelPlaceholder({ label }: { label: string }): React.ReactElement {
   return (
@@ -54,38 +24,69 @@ function PanelPlaceholder({ label }: { label: string }): React.ReactElement {
   );
 }
 
-function SidePanelContent(): React.ReactElement {
-  const { activeActivity } = useUi();
-  const { tasks, activeTaskId } = useTasks();
-  const { activeAgentId } = useAgents();
-  switch (activeActivity) {
-    case 'settings':   return <SettingsPanel />;
-    case 'files':      return <FilePanel />;
-    case 'processes':  return <ProcessList />;
-    case 'tasks':      return activeTaskId ? <TaskOutput /> : <TaskPanel />;
-    case 'todos':      return <TodoPanel />;
-    case 'agents':     return !activeAgentId ? <AgentDashboard /> : <AgentChat />;
-    case 'scheduling': return <CronManager />;
-    case 'memory':     return <MemoryBrowser />;
-    case 'mcp':        return <PanelPlaceholder label="MCP Servers" />;
-    case 'git':        return <PanelPlaceholder label="Git" />;
-    default:           return <PanelPlaceholder label="Chat panel" />;
-  }
-}
-
-function ChatSidePanelContent(): React.ReactElement {
-  const { chatSideTab } = useUi();
-  switch (chatSideTab) {
-    case 'chat':     return <SidePanelContent />;
-    case 'sessions': return <SessionManager />;
-    case 'context':  return <ContextUsageGrid />;
-    case 'search':   return <GrepPanel />;
-  }
-}
+const CHAT_TABS: { key: import('../../store/ui').ChatSideTab; label: string }[] = [
+  { key: 'sessions', label: 'Sessions' },
+  { key: 'search', label: 'Search' },
+  { key: 'context', label: 'Context' },
+];
 
 export function SidePanel(): React.ReactElement | null {
-  const { sidePanelOpen, activeActivity } = useUi();
+  const { sidePanelOpen, activeActivity, chatSideTab } = useUi();
   if (!sidePanelOpen) return null;
+
+  const { tasks, activeTaskId } = useTasks();
+  const { activeAgentId } = useAgents();
+
+  if (activeActivity === 'chat') {
+    return (
+      <div
+        className="flex flex-col shrink-0 overflow-hidden"
+        style={{
+          width: 'var(--side-w)',
+          background: 'var(--bg-panel)',
+          borderRight: '1px solid var(--border)',
+        }}
+      >
+        <div className="flex items-center shrink-0 border-b border-border" style={{ height: '36px' }}>
+          {CHAT_TABS.map(t => (
+            <button
+              key={t.key}
+              className={`flex-1 text-xs font-medium transition-colors ${
+                chatSideTab === t.key
+                  ? 'text-primary border-b-2 border-primary'
+                  : 'text-muted hover:text-primary'
+              }`}
+              style={{ height: '100%' }}
+              onClick={() => useUi.getState().setChatSideTab(t.key)}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+        <div className="flex-1 overflow-hidden">
+          {chatSideTab === 'sessions' && <SessionManager />}
+          {chatSideTab === 'search' && <GrepPanel />}
+          {chatSideTab === 'context' && <ContextUsageGrid />}
+        </div>
+      </div>
+    );
+  }
+
+  let content: React.ReactNode;
+  switch (activeActivity) {
+    case 'settings':   content = <SettingsPanel />; break;
+    case 'files':      content = <FilePanel />; break;
+    case 'processes':  content = <ProcessList />; break;
+    case 'tasks':      content = activeTaskId ? <TaskOutput /> : <TaskPanel />; break;
+    case 'todos':      content = <TodoPanel />; break;
+    case 'agents':     content = !activeAgentId ? <AgentDashboard /> : <AgentChat />; break;
+    case 'scheduling': content = <CronManager />; break;
+    case 'memory':     content = <MemoryBrowser />; break;
+    case 'mcp':        content = <PanelPlaceholder label="MCP Servers" />; break;
+    case 'git':        content = <PanelPlaceholder label="Git" />; break;
+    default:           content = <SessionManager />; break;
+  }
+
   return (
     <div
       className="flex flex-col shrink-0 overflow-hidden"
@@ -95,8 +96,7 @@ export function SidePanel(): React.ReactElement | null {
         borderRight: '1px solid var(--border)',
       }}
     >
-      {activeActivity === 'chat' && <ChatSideTabs />}
-      {activeActivity === 'chat' ? <ChatSidePanelContent /> : <SidePanelContent />}
+      {content}
     </div>
   );
 }

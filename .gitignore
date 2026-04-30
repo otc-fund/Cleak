@@ -12,7 +12,8 @@ out/
 *.key
 
 # ── Claude & AI tooling ──
-.claude/
+.claude/settings.local.json
+.claude/settings.json
 .remember/
 .prompt/
 prompt/

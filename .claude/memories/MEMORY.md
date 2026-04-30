@@ -1,0 +1,8 @@
+- [project_info](project_info.md) — Cleak Desktop GUI project overview
+- [cleak-gui-component](../skills/cleak-gui-component.md) — GUI component patterns
+- [cleak-state-management](../skills/cleak-state-management.md) — Zustand store patterns
+- [cleak-ipc-bridge](../skills/cleak-ipc-bridge.md) — IPC communication patterns
+- [cleak-testing](../skills/cleak-testing.md) — Testing patterns
+- [cleak-design-system](../skills/cleak-design-system.md) — Design system & styling
+- [cleak-cli-component](../skills/cleak-cli-component.md) — CLI TUI component patterns
+- [cleak-memory](../skills/cleak-memory.md) — Memory system patterns

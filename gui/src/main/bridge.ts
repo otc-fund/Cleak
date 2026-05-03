@@ -20,6 +20,8 @@ export interface BridgeOptions {
   restart?: { maxAttempts: number; baseDelayMs: number };
   /** Compact context summary to prime the session — injected as first stdin message. */
   contextPriming?: string;
+  /** Path to a temporary settings file that overrides global Claude settings. */
+  settingsFile?: string;
 }
 
 export class CleakBridge extends EventEmitter {
@@ -66,9 +68,13 @@ export class CleakBridge extends EventEmitter {
       '--verbose',
       '--input-format', 'stream-json',
       '--output-format', 'stream-json',
+      '--bare',
     ];
     if (this.opts.bypassPermissions !== false) {
       args.push('--permission-mode', 'bypassPermissions');
+    }
+    if (this.opts.settingsFile) {
+      args.push('--settings', this.opts.settingsFile);
     }
     const child = this.opts.spawn(this.opts.claudeBin, args, {
       cwd: this.opts.cwd,

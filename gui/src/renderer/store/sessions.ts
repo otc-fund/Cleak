@@ -9,6 +9,8 @@ interface SessionState {
   currentSession: Session | null;
   loadSessions(): Promise<void>;
   createSession(id: string, name?: string): void;
+  /** Create a session entry in local state only — no IPC save. */
+  createSessionLocal(id: string, name?: string): void;
   renameSession(id: string, name: string): void;
   /** Just updates currentSession in the list — use switchSession() for the full flow. */
   selectSessionInList(id: string): void;
@@ -66,6 +68,26 @@ export const useSessions = create<SessionState>((set) => ({
         pinned: false,
       };
       void ipcSave(session);
+      return { sessions: [...s.sessions, session], currentSession: session };
+    });
+  },
+
+  /** Create a session entry in local state only — no IPC save.
+   *  Used when the main process defers persistence until first activity. */
+  createSessionLocal(id, name) {
+    set(s => {
+      if (s.sessions.some(sess => sess.id === id)) return s;
+      const now = Date.now();
+      const session: Session = {
+        id,
+        name: name ?? `Session ${s.sessions.length + 1}`,
+        createdAt: now,
+        lastActive: now,
+        messageCount: 0,
+        tokenCount: 0,
+        cost: 0,
+        pinned: false,
+      };
       return { sessions: [...s.sessions, session], currentSession: session };
     });
   },

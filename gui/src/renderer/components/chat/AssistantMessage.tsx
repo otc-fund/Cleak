@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import type { ChatMessage, ToolUseBlock, ToolResultBlock, TextBlock, ThinkingBlock as ThinkingBlockType } from '../../store/chat';
 import { ThinkingRun } from './ThinkingRun';
 import { ToolCallCard } from './ToolCallCard';
+import { ToolCallBatch } from './ToolCallBatch';
 import { MarkdownBody } from './MarkdownBody';
 
 interface Props {
@@ -55,7 +56,10 @@ export function AssistantMessage({ message }: Props): React.ReactElement {
           return <ThinkingRun key={`g-${i}`} blocks={g.blocks} resultMap={resultMap} />;
         }
         if (g.type === 'tool') {
-          // Multiple consecutive tools → compact inline list; single tool → full card
+          // 3+ consecutive tools → batch view; otherwise individual cards
+          if (g.blocks.length >= 3) {
+            return <ToolCallBatch key={`g-${i}`} tools={g.blocks} resultMap={resultMap} />;
+          }
           return g.blocks.map((tu, j) => (
             <ToolCallCard key={`g-${i}-${j}`} toolUse={tu} result={resultMap.get(tu.id)} compact />
           ));

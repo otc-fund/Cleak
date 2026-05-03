@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ChevronDown, ChevronRight, Brain } from 'lucide-react';
 import type { ThinkingBlock as ThinkingBlockType, ToolUseBlock } from '../../store/chat';
 import { ToolCallCard } from './ToolCallCard';
+import { ToolCallBatch } from './ToolCallBatch';
 import type { ToolResultBlock } from '../../store/chat';
 
 interface Props {
@@ -41,9 +42,14 @@ export function ThinkingRun({ blocks, resultMap }: Props): React.ReactElement {
               {thinkingText}
             </div>
           )}
-          {toolBlocks.map((tu, i) => (
-            <ToolCallCard key={i} toolUse={tu} result={resultMap.get(tu.id)} compact />
-          ))}
+          {toolBlocks.map((tu, i) => {
+            // If there are 3+ tools inside a thinking run, show as batch
+            if (toolBlocks.length >= 3 && i === 0) {
+              return <ToolCallBatch key="tool-batch" tools={toolBlocks} resultMap={resultMap} />;
+            }
+            if (toolBlocks.length >= 3) return null;
+            return <ToolCallCard key={i} toolUse={tu} result={resultMap.get(tu.id)} compact />;
+          })}
         </div>
       )}
     </div>

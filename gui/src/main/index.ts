@@ -1,15 +1,19 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
 import { spawn as nodeSpawn } from 'node:child_process';
 import { resolve, join } from 'node:path';
-import { homedir } from 'node:os';
+import { homedir, tmpdir } from 'node:os';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import chokidar from 'chokidar';
+import dotenv from 'dotenv';
+
+// Load .env file from the project root at runtime
+dotenv.config({ path: join(process.cwd(), '.env') });
 import { CleakBridge } from './bridge';
 import { IpcChannels, FileIpcChannels, SearchIpcChannels } from './ipc';
 import type { BridgeStatus, AppSettings } from './ipc';
 import type { CleakInboundFrame } from './cleakProtocol';
 import { registerPtyIpc, killAllPtys } from './ptyManager';
-import { loadSettings, saveSettings } from './settings';
+import { loadSettings, saveSettings, DEFAULTS } from './settings';
 import { getFileTree } from './fileTree';
 import { runGrep, runGlob } from './grepEngine';
 import * as fs from 'fs';
@@ -65,9 +69,27 @@ function resolveSdkCwd(): string {
 
 function buildEnv(shimPort: number): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = { ...process.env };
+  // Force all Claude traffic through the local shim
   env['ANTHROPIC_BASE_URL'] = `http://127.0.0.1:${shimPort}`;
   env['ANTHROPIC_API_KEY'] = 'shim-passthrough';
+  // Clear ALL tokens/config that would bypass the shim. Claude CLI reads
+  // ANTHROPIC_AUTH_TOKEN from ~/.claude/settings.json env section and uses it
+  // to authenticate directly, ignoring the shim's base URL entirely.
+  delete env['ANTHROPIC_AUTH_TOKEN'];
+  delete env['CLAUDE_CODE_API_KEY'];
+  delete env['CLAUDE_API_KEY'];
+  delete env['OPENAI_API_KEY'];
+  delete env['OPENAI_BASE_URL'];
+  // Clear any model overrides from Claude's settings that might override
+  // the shim's routing
+  delete env['ANTHROPIC_SMALL_FAST_MODEL'];
+  delete env['ANTHROPIC_DEFAULT_HAIKU_MODEL'];
+  delete env['ANTHROPIC_DEFAULT_SONNET_MODEL'];
+  delete env['ANTHROPIC_DEFAULT_OPUS_MODEL'];
+  delete env['CLAUDE_CODE_SUBAGENT_MODEL'];
+  delete env['CLAUDE_CODE_MAX_OUTPUT_TOKENS'];
   if (process.env['ANTHROPIC_MODEL']) env['ANTHROPIC_MODEL'] = process.env['ANTHROPIC_MODEL'];
+  console.log('[cleak-gui] buildEnv: ANTHROPIC_BASE_URL =', env['ANTHROPIC_BASE_URL'], 'port =', shimPort);
   return env;
 }
 
@@ -80,9 +102,14 @@ function registerSettingsIpc(): void {
 
 async function createWindow(): Promise<void> {
   const stored = loadSettings();
-  const baseUrl = process.env['ANTHROPIC_BASE_URL'] ?? stored.baseUrl;
-  const apiKey  = process.env['ANTHROPIC_API_KEY']  ?? stored.apiKey;
-  const model   = process.env['ANTHROPIC_MODEL']    ?? stored.model;
+  // Prefer GUI settings over system env — the user configures the upstream
+  // in the Settings UI, and system env vars (e.g. from ~/.claude/settings.json
+  // or Windows env) would otherwise override and route traffic to the wrong API.
+  const baseUrl = stored.baseUrl || process.env['ANTHROPIC_BASE_URL'] || DEFAULTS.baseUrl;
+  // API key: prefer stored, but fall back to env (for .env file during dev)
+  const apiKey  = stored.apiKey  || process.env['ANTHROPIC_API_KEY']  || '';
+  const model   = stored.model   || process.env['ANTHROPIC_MODEL']    || DEFAULTS.model;
+  console.log('[cleak-gui] shim config: baseUrl =', baseUrl, 'model =', model, 'hasApiKey =', !!apiKey);
 
   const { createAnthropicShim } = await import('./anthropicShim');
   const shim = await createAnthropicShim({ upstreamBaseUrl: baseUrl, upstreamApiKey: apiKey, model });
@@ -111,14 +138,31 @@ async function createWindow(): Promise<void> {
 
   // ── Multi-bridge management (one Claude process per session) ──
   const claudeBin = resolveClaudeBin();
+
+  // Create a temporary settings file that forces Claude CLI to use the shim.
+  // In --bare mode, Claude CLI reads auth from this file instead of ~/.claude/settings.json.
+  const tmpSettingsPath = join(tmpdir(), `cleak-settings-${Date.now()}.json`);
+  const shimSettings = {
+    env: {
+      ANTHROPIC_BASE_URL: `http://127.0.0.1:${shim.port}`,
+      ANTHROPIC_API_KEY: 'shim-passthrough',
+      ANTHROPIC_MODEL: process.env['ANTHROPIC_MODEL'] || 'qwen3.6-plus',
+    },
+  };
+  writeFileSync(tmpSettingsPath, JSON.stringify(shimSettings, null, 2));
+  console.log('[cleak-gui] wrote temp settings:', tmpSettingsPath);
+
   const bridgeOpts = {
     spawn: (cmd: string, args: readonly string[], opts: any) => nodeSpawn(cmd, [...args], { ...opts, shell: true }),
     cwd: resolveSdkCwd(),
     env: buildEnv(shim.port),
     claudeBin,
+    settingsFile: tmpSettingsPath,
   };
 
   const managedBridges = new Map<string, ManagedBridge>();
+  /** Sessions whose bridge exists but metadata isn't persisted yet (no activity). */
+  const pendingSessions = new Set<string>();
   let activeManaged: ManagedBridge | null = null;
 
   /**
@@ -213,7 +257,7 @@ async function createWindow(): Promise<void> {
    */
   function buildContextPriming(sessionId: string): string | undefined {
     const entries = loadSessionMessages(sessionId);
-    const rememberMemory = loadSessionMemory();
+    const rememberMemory = loadSessionMemory(sessionId);
 
     const parts: string[] = [];
 
@@ -264,16 +308,12 @@ async function createWindow(): Promise<void> {
 
   /** Create a new managed bridge with a given session ID and make it active. */
   function spawnManagedBridge(sessionId: string): ManagedBridge {
-    // Persist the session entry immediately so it appears in the list
-    // even before the renderer has processed any frames from this session.
+    // Defer session metadata persistence until the first frame arrives.
+    // This prevents empty sessions from appearing when the user creates a
+    // new session but never sends a message.
     const sessions = loadSessions();
     if (!sessions.some(s => s.id === sessionId)) {
-      sessions.push({
-        id: sessionId, name: `Session ${sessions.length + 1}`,
-        createdAt: Date.now(), lastActive: Date.now(),
-        messageCount: 0, tokenCount: 0, cost: 0, pinned: false,
-      });
-      saveSessions(sessions);
+      pendingSessions.add(sessionId);
     }
 
     const contextPriming = buildContextPriming(sessionId);
@@ -299,6 +339,17 @@ async function createWindow(): Promise<void> {
 
   // ── IPC: send user message → active bridge ──
   ipcMain.on(IpcChannels.sendUserMessage, (_e, text: string) => {
+    // Confirm a pending session when the user sends their first message
+    if (activeManaged && pendingSessions.has(activeManaged.sessionId)) {
+      pendingSessions.delete(activeManaged.sessionId);
+      const sessions = loadSessions();
+      sessions.push({
+        id: activeManaged.sessionId, name: `Session ${sessions.length + 1}`,
+        createdAt: Date.now(), lastActive: Date.now(),
+        messageCount: 0, tokenCount: 0, cost: 0, pinned: false,
+      });
+      saveSessions(sessions);
+    }
     activeManaged?.bridge.sendUserMessage(text);
   });
 
@@ -397,8 +448,8 @@ async function createWindow(): Promise<void> {
     writeHandoffNote(content);
   });
 
-  ipcMain.handle(IpcChannels.getMemory, (): string | null => {
-    return loadSessionMemory();
+  ipcMain.handle(IpcChannels.getMemory, (_e, sessionId?: string): string | null => {
+    return sessionId ? loadSessionMemory(sessionId) : null;
   });
 
   win.on('closed', () => {

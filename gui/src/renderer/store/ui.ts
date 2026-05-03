@@ -35,6 +35,10 @@ interface UiState {
   theme: Theme;
   selectedToolCall: ToolCallDetail | null;
   planMode: boolean;
+  /** Whether the chapters/TOC panel is open */
+  chaptersPanelOpen: boolean;
+  /** The currently active chapter (turn ID) based on scroll position */
+  activeChapter: string | null;
   setActivity(a: Activity): void;
   setChatSideTab(t: ChatSideTab): void;
   setSidePanelOpen(open: boolean): void;
@@ -43,6 +47,8 @@ interface UiState {
   setTheme(t: Theme): void;
   setSelectedToolCall(detail: ToolCallDetail | null): void;
   setPlanMode(v: boolean): void;
+  setChaptersPanelOpen(open: boolean): void;
+  setActiveChapter(id: string | null): void;
 }
 
 export const useUi = create<UiState>((set, get) => ({
@@ -54,6 +60,8 @@ export const useUi = create<UiState>((set, get) => ({
   theme: 'dark',
   selectedToolCall: null,
   planMode: false,
+  chaptersPanelOpen: false,
+  activeChapter: null,
 
   setActivity(a) {
     const { activeActivity, sidePanelOpen } = get();
@@ -71,4 +79,6 @@ export const useUi = create<UiState>((set, get) => ({
   setTheme: (theme) => set({ theme }),
   setSelectedToolCall: (detail) => set({ selectedToolCall: detail, rightPanelOpen: detail != null }),
   setPlanMode: (v) => set({ planMode: v }),
+  setChaptersPanelOpen: (open) => set({ chaptersPanelOpen: open }),
+  setActiveChapter: (id) => set({ activeChapter: id }),
 }));

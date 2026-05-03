@@ -9,7 +9,7 @@ export interface AppSettings {
   apiKey: string;
 }
 
-const DEFAULTS: AppSettings = {
+export const DEFAULTS: AppSettings = {
   baseUrl: 'http://localhost:3003/v1',
   model: 'qwen3.6-plus',
   theme: 'dark',

@@ -43,7 +43,7 @@ export const AssistantFrame = z.object({
     content: z.union([z.string(), z.array(ContentBlock)]),
     model: z.string().optional(),
   }).passthrough(),
-  error: z.object({ type: z.string() }).passthrough().optional(),
+  error: z.union([z.object({ type: z.string() }).passthrough(), z.string()]).optional(),
 }).passthrough();
 
 export const UserFrame = z.object({

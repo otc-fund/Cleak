@@ -80,11 +80,13 @@ export async function restartBridgeForNewSession(): Promise<void> {
   // Spawn a new Claude process for the new session — returns our stable session UUID
   const sessionId = await window.bridge.createNewSession();
 
+  // Create the session in local state immediately. The main process defers
+  // persisting to sessions.json until the first frame arrives (activity check).
+  sessions.createSessionLocal(sessionId);
+
   // Clear chat state and wire to the new session
   chat.resetForNewSession();
   chat.setActiveSessionId(sessionId);
-  sessions.clearSessions();
-  void sessions.loadSessions();
 }
 
 /**

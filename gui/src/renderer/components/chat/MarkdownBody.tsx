@@ -9,12 +9,30 @@ interface Props {
 }
 
 export function MarkdownBody({ children }: Props): React.ReactElement {
+  const headingRef = React.useRef(0);
+  const makeHeading = (Tag: string) => {
+    return ({ children: c, ...props }: any) => {
+      const id = `h-${headingRef.current++}`;
+      return (
+        <Tag id={id} data-heading {...props} style={{ color: '#e5e5e5', fontWeight: 600, marginTop: '1em', marginBottom: '0.5em' }}>
+          {c}
+        </Tag>
+      );
+    };
+  };
+
   return (
     <div style={{ color: '#e5e5e5', fontSize: '14px', lineHeight: '1.6', overflowX: 'hidden' }}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeHighlight]}
         components={{
+          h1: makeHeading('h1'),
+          h2: makeHeading('h2'),
+          h3: makeHeading('h3'),
+          h4: makeHeading('h4'),
+          h5: makeHeading('h5'),
+          h6: makeHeading('h6'),
           p: ({ children: c, ...props }) => (
             <p {...props} style={{ color: '#e5e5e5', margin: '0.5em 0' }}>{c}</p>
           ),

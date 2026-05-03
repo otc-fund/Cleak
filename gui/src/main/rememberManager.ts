@@ -4,29 +4,24 @@ import { homedir } from 'node:os';
 
 /**
  * Claude-style remember system — saves session state for clean continuation.
- * Mirrors the remember plugin architecture but implemented natively in Node.js.
+ * Each session gets its own isolated directory under .remember/sessions/<sessionId>/.
+ * Cross-session files (identity.md, remember.md) are shared intentionally.
  */
 
 const REMEMBER_DIR = join(homedir(), '.remember');
-const LOGS_DIR = join(REMEMBER_DIR, 'logs');
+const SESSIONS_DIR = join(REMEMBER_DIR, 'sessions');
 const TMP_DIR = join(REMEMBER_DIR, 'tmp');
 const PROJECT_REMEMBER = join(process.cwd(), '.remember');
 
 export interface RememberConfig {
   cooldownSeconds: number;
   minMessagesBeforeSave: number;
-  ndcIntervalSeconds: number;
-  ndcEnabled: boolean;
-  recoveryEnabled: boolean;
   debug: boolean;
 }
 
 const DEFAULT_CONFIG: RememberConfig = {
   cooldownSeconds: 120,
   minMessagesBeforeSave: 3,
-  ndcIntervalSeconds: 3600,
-  ndcEnabled: true,
-  recoveryEnabled: true,
   debug: false,
 };
 
@@ -36,7 +31,7 @@ function ensureDir(dir: string): void {
 
 function init(): void {
   ensureDir(REMEMBER_DIR);
-  ensureDir(LOGS_DIR);
+  ensureDir(SESSIONS_DIR);
   ensureDir(TMP_DIR);
   ensureDir(PROJECT_REMEMBER);
 
@@ -47,9 +42,14 @@ function init(): void {
   }
 }
 
+/** Return the per-session directory for this sessionId. */
+function sessionDir(sessionId: string): string {
+  return join(SESSIONS_DIR, sessionId);
+}
+
 function log(msg: string): void {
   const line = `[${new Date().toISOString()}] ${msg}\n`;
-  appendFileSync(join(LOGS_DIR, 'pipeline.log'), line);
+  appendFileSync(join(TMP_DIR, 'pipeline.log'), line);
 }
 
 function now(): Date {
@@ -62,8 +62,7 @@ function formatTimestamp(d: Date): string {
 
 /**
  * Save a session to the remember pipeline.
- * Extracts exchanges and writes to now.md (current session buffer).
- * If NDC is due, compresses into daily files.
+ * Writes to the session's own now.md — NOT to any global file.
  */
 export function saveSession(sessionId: string, messages: { role: string; blocks?: unknown[]; content?: string }[]): void {
   init();
@@ -74,18 +73,18 @@ export function saveSession(sessionId: string, messages: { role: string; blocks?
     return;
   }
 
-  // Check cooldown
-  const cooldownPath = join(TMP_DIR, 'save-cooldown');
+  // Per-session cooldown
+  const cooldownPath = join(TMP_DIR, `save-cooldown-${sessionId}`);
   if (existsSync(cooldownPath)) {
     const mtime = parseInt(readFileSync(cooldownPath, 'utf8').trim(), 10);
     const elapsed = (Date.now() - mtime) / 1000;
     if (elapsed < config.cooldownSeconds) {
-      if (config.debug) log(`[save] Cooldown active (${Math.round(elapsed)}s/${config.cooldownSeconds}s)`);
+      if (config.debug) log(`[save] Cooldown active (${Math.round(elapsed)}s/${config.cooldownSeconds}s) for ${sessionId}`);
       return;
     }
   }
 
-  // Write cooldown marker
+  // Write per-session cooldown
   writeFileSync(cooldownPath, Date.now().toString());
 
   const exchanges = extractExchanges(messages);
@@ -94,19 +93,12 @@ export function saveSession(sessionId: string, messages: { role: string; blocks?
     return;
   }
 
-  // Write to now.md
+  // Write to session's own now.md
+  const sessDir = sessionDir(sessionId);
+  ensureDir(sessDir);
   const nowMd = buildNowMd(sessionId, exchanges);
-  writeFileSync(join(REMEMBER_DIR, 'now.md'), nowMd);
+  writeFileSync(join(sessDir, 'now.md'), nowMd);
   log(`[save] Wrote now.md for ${sessionId} (${exchanges.length} exchanges)`);
-
-  // Check if NDC compression is due
-  if (config.ndcEnabled) {
-    const lastNdc = getLastNdcTimestamp();
-    const elapsed = (Date.now() - lastNdc) / 1000;
-    if (elapsed >= config.ndcIntervalSeconds) {
-      compressDaily(sessionId, exchanges);
-    }
-  }
 }
 
 interface Exchange {
@@ -117,7 +109,6 @@ interface Exchange {
 
 /**
  * Extract user/assistant exchanges from messages.
- * Truncates long blocks to keep summaries concise.
  */
 function extractExchanges(messages: { role: string; blocks?: unknown[]; content?: string }[]): Exchange[] {
   const exchanges: Exchange[] = [];
@@ -182,116 +173,21 @@ function buildNowMd(sessionId: string, exchanges: Exchange[]): string {
 }
 
 /**
- * Compress current exchanges into a daily summary file.
+ * Load session-specific memory.
+ * Only reads from the session's own directory.
+ * Cross-global files (identity.md, remember.md) are NOT included —
+ * those are intentional user-managed notes, not session context.
  */
-function compressDaily(sessionId: string, exchanges: Exchange[]): void {
-  const today = new Date().toISOString().split('T')[0];
-  const dailyFile = join(REMEMBER_DIR, `today-${today}.md`);
-
-  const lines: string[] = [
-    `# Daily Summary — ${today}`,
-    '',
-    '## Sessions',
-    '',
-  ];
-
-  for (const ex of exchanges) {
-    lines.push(`- **User:** ${ex.user.slice(0, 150)}`);
-    if (ex.assistant) {
-      lines.push(`  **Assistant:** ${ex.assistant.slice(0, 150)}`);
-    }
-    lines.push('');
-  }
-
-  appendFileSync(dailyFile, lines.join('\n') + '\n');
-  log(`[compress] Wrote ${dailyFile}`);
-
-  // Update NDC timestamp
-  writeFileSync(join(TMP_DIR, 'last-ndc'), Date.now().toString());
-
-  // Consolidate into recent.md (last 7 days)
-  consolidateRecent();
-}
-
-function getLastNdcTimestamp(): number {
-  const ndcPath = join(TMP_DIR, 'last-ndc');
-  if (existsSync(ndcPath)) {
-    return parseInt(readFileSync(ndcPath, 'utf8').trim(), 10);
-  }
-  return 0;
-}
-
-/**
- * Build recent.md from the last 7 days of daily summaries.
- */
-function consolidateRecent(): void {
-  const today = new Date();
-  const files: string[] = [];
-
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    const dateStr = d.toISOString().split('T')[0];
-    const file = join(REMEMBER_DIR, `today-${dateStr}.md`);
-    if (existsSync(file)) {
-      files.push(file);
-    }
-  }
-
-  if (files.length === 0) return;
-
-  const content = files
-    .map(f => readFileSync(f, 'utf8'))
-    .join('\n\n---\n\n');
-
-  writeFileSync(join(REMEMBER_DIR, 'recent.md'), content);
-  log(`[consolidate] Wrote recent.md (${files.length} days)`);
-}
-
-/**
- * Load all memory files for injection into a new session.
- * Returns a formatted context block that Claude reads at session start.
- */
-export function loadSessionMemory(): string | null {
+export function loadSessionMemory(sessionId: string): string | null {
   init();
 
+  const sessDir = sessionDir(sessionId);
   const parts: string[] = [];
 
-  // Identity
-  const identityPath = join(REMEMBER_DIR, 'identity.md');
-  if (existsSync(identityPath)) {
-    parts.push('## Identity\n' + readFileSync(identityPath, 'utf8'));
-  }
-
-  // Handoff note (remember.md)
-  const rememberPath = join(REMEMBER_DIR, 'remember.md');
-  if (existsSync(rememberPath)) {
-    parts.push('## Handoff Note (Last Session)\n' + readFileSync(rememberPath, 'utf8'));
-  }
-
-  // Now.md (current session buffer)
-  const nowPath = join(REMEMBER_DIR, 'now.md');
+  // Session's own now.md (current session buffer)
+  const nowPath = join(sessDir, 'now.md');
   if (existsSync(nowPath)) {
     parts.push('## Current Session Buffer\n' + readFileSync(nowPath, 'utf8'));
-  }
-
-  // Today
-  const today = new Date().toISOString().split('T')[0];
-  const todayPath = join(REMEMBER_DIR, `today-${today}.md`);
-  if (existsSync(todayPath)) {
-    parts.push("## Today's Summary\n" + readFileSync(todayPath, 'utf8'));
-  }
-
-  // Recent (last 7 days)
-  const recentPath = join(REMEMBER_DIR, 'recent.md');
-  if (existsSync(recentPath)) {
-    parts.push('## Recent History (Last 7 Days)\n' + readFileSync(recentPath, 'utf8'));
-  }
-
-  // Archive
-  const archivePath = join(REMEMBER_DIR, 'archive.md');
-  if (existsSync(archivePath)) {
-    parts.push('## Archive\n' + readFileSync(archivePath, 'utf8'));
   }
 
   if (parts.length === 0) return null;
@@ -299,7 +195,7 @@ export function loadSessionMemory(): string | null {
   return [
     '# Remembered Context',
     '',
-    'The following context was loaded from your previous sessions.',
+    'The following context was loaded from this session.',
     '',
     ...parts,
     '',
@@ -308,29 +204,11 @@ export function loadSessionMemory(): string | null {
 }
 
 /**
- * Write a handoff note (triggered by /remember or session end).
+ * Write a handoff note. These ARE cross-session — the user writes a note
+ * to carry into the next session intentionally.
  */
 export function writeHandoffNote(content: string): void {
   init();
   writeFileSync(join(REMEMBER_DIR, 'remember.md'), content);
   log('[handoff] Wrote remember.md');
-}
-
-/**
- * Clean up old daily files (keep last 30 days).
- */
-export function cleanupOldFiles(): void {
-  init();
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - 30);
-
-  const files = readdirSync(REMEMBER_DIR).filter(f => f.startsWith('today-') && f.endsWith('.md'));
-  for (const f of files) {
-    const dateStr = f.replace('today-', '').replace('.md', '');
-    const fileDate = new Date(dateStr);
-    if (fileDate < cutoff) {
-      unlinkSync(join(REMEMBER_DIR, f));
-      log(`[cleanup] Removed ${f}`);
-    }
-  }
 }

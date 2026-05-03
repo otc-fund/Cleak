@@ -4,14 +4,79 @@ import { cn } from '../../lib/cn';
 import { useUi } from '../../store/ui';
 import type { ToolUseBlock, ToolResultBlock } from '../../store/chat';
 
-interface Props {
+interface BatchProps {
   tools: ToolUseBlock[];
   resultMap: Map<string, ToolResultBlock>;
 }
 
-export function ToolCallBatch({ tools, resultMap }: Props): React.ReactElement {
-  const [open, setOpen] = useState(false);
+interface RowProps {
+  tool: ToolUseBlock;
+  result?: ToolResultBlock;
+  index: number;
+}
+
+function ToolCallBatchRow({ tool, result, index }: RowProps): React.ReactElement {
+  const [detailOpen, setDetailOpen] = useState(false);
   const setSelectedToolCall = useUi((s) => s.setSelectedToolCall);
+
+  const resultText = result
+    ? typeof result.content === 'string'
+      ? result.content
+      : JSON.stringify(result.content, null, 2)
+    : null;
+  const isError = result?.is_error;
+  const name = tool.name.replace(/Tool$/, '').replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase();
+
+  return (
+    <div className={cn(
+      'px-2 py-1.5 hover:bg-hover/20 transition-colors',
+      isError && 'bg-red-950/10',
+    )}>
+      <button
+        className="w-full flex items-center gap-1.5 text-[10px]"
+        onClick={() => setSelectedToolCall({
+          toolName: tool.name,
+          input: tool.input,
+          result: result?.content,
+          isError,
+        })}
+      >
+        <span className="text-muted/60 w-4 text-right">{index + 1}</span>
+        <span className="text-primary/80 font-mono">{name}</span>
+        {result ? (
+          isError
+            ? <XCircle size={9} className="text-red-400 ml-auto" />
+            : <CheckCircle size={9} className="text-green-400 ml-auto" />
+        ) : (
+          <span className="ml-auto text-muted/40 animate-pulse">running…</span>
+        )}
+        <button
+          className="ml-2 text-muted/50 hover:text-primary"
+          onClick={(e) => { e.stopPropagation(); setDetailOpen(v => !v); }}
+        >
+          {detailOpen ? <ChevronDown size={9} /> : <ChevronRight size={9} />}
+        </button>
+      </button>
+      {detailOpen && (
+        <div className="pl-6 pt-1 space-y-1">
+          <details className="text-[10px] text-muted">
+            <summary className="cursor-pointer hover:text-primary">params</summary>
+            <pre className="mt-1 overflow-x-auto whitespace-pre-wrap">{JSON.stringify(tool.input, null, 2)}</pre>
+          </details>
+          {resultText != null && (
+            <details className={cn('text-[10px]', isError ? 'text-red-300' : 'text-muted')}>
+              <summary className="cursor-pointer hover:text-primary">result</summary>
+              <pre className="mt-1 overflow-x-auto whitespace-pre-wrap">{resultText.slice(0, 500)}{resultText.length > 500 ? '\n…(truncated)' : ''}</pre>
+            </details>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function ToolCallBatch({ tools, resultMap }: BatchProps): React.ReactElement {
+  const [open, setOpen] = useState(false);
 
   const completedCount = tools.filter(t => resultMap.has(t.id)).length;
   const errorCount = tools.filter(t => resultMap.get(t.id)?.is_error).length;
@@ -47,64 +112,9 @@ export function ToolCallBatch({ tools, resultMap }: Props): React.ReactElement {
       {/* Expanded list */}
       {open && (
         <div className="border-t border-border/30 divide-y divide-border/20">
-          {tools.map((tu, i) => {
-            const result = resultMap.get(tu.id);
-            const resultText = result
-              ? typeof result.content === 'string'
-                ? result.content
-                : JSON.stringify(result.content, null, 2)
-              : null;
-            const isError = result?.is_error;
-            const name = tu.name.replace(/Tool$/, '').replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase();
-            const [detailOpen, setDetailOpen] = useState(false);
-
-            return (
-              <div key={i} className={cn(
-                'px-2 py-1.5 hover:bg-hover/20 transition-colors',
-                isError && 'bg-red-950/10',
-              )}>
-                <button
-                  className="w-full flex items-center gap-1.5 text-[10px]"
-                  onClick={() => setSelectedToolCall({
-                    toolName: tu.name,
-                    input: tu.input,
-                    result: result?.content,
-                    isError,
-                  })}
-                >
-                  <span className="text-muted/60 w-4 text-right">{i + 1}</span>
-                  <span className="text-primary/80 font-mono">{name}</span>
-                  {result ? (
-                    isError
-                      ? <XCircle size={9} className="text-red-400 ml-auto" />
-                      : <CheckCircle size={9} className="text-green-400 ml-auto" />
-                  ) : (
-                    <span className="ml-auto text-muted/40 animate-pulse">running…</span>
-                  )}
-                  <button
-                    className="ml-2 text-muted/50 hover:text-primary"
-                    onClick={(e) => { e.stopPropagation(); setDetailOpen(v => !v); }}
-                  >
-                    {detailOpen ? <ChevronDown size={9} /> : <ChevronRight size={9} />}
-                  </button>
-                </button>
-                {detailOpen && (
-                  <div className="pl-6 pt-1 space-y-1">
-                    <details className="text-[10px] text-muted">
-                      <summary className="cursor-pointer hover:text-primary">params</summary>
-                      <pre className="mt-1 overflow-x-auto whitespace-pre-wrap">{JSON.stringify(tu.input, null, 2)}</pre>
-                    </details>
-                    {resultText != null && (
-                      <details className={cn('text-[10px]', isError ? 'text-red-300' : 'text-muted')}>
-                        <summary className="cursor-pointer hover:text-primary">result</summary>
-                        <pre className="mt-1 overflow-x-auto whitespace-pre-wrap">{resultText.slice(0, 500)}{resultText.length > 500 ? '\n…(truncated)' : ''}</pre>
-                      </details>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+          {tools.map((tu, i) => (
+            <ToolCallBatchRow key={tu.id} tool={tu} result={resultMap.get(tu.id)} index={i} />
+          ))}
         </div>
       )}
     </div>

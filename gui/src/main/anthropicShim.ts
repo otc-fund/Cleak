@@ -23,7 +23,7 @@ export interface ShimHandle {
 
 interface AnthropicMessage {
   role: string;
-  content: string | { type: string; text?: string }[];
+  content: string | { type: string; text?: string; cache_control?: unknown }[];
 }
 
 interface AnthropicRequest {
@@ -35,13 +35,23 @@ interface AnthropicRequest {
   messages: AnthropicMessage[];
 }
 
+function stripCacheControl(blocks: any[]): any[] {
+  return blocks.map(b => {
+    if (b && typeof b === 'object' && 'cache_control' in b) {
+      const { cache_control, ...rest } = b;
+      return rest;
+    }
+    return b;
+  });
+}
+
 function buildOpenAIBody(req: AnthropicRequest, model: string): Record<string, unknown> {
   const effectiveModel = model || 'qwen3.6-plus';
   const messages: { role: string; content: unknown; tool_calls?: unknown[]; tool_call_id?: string }[] = [];
   if (req.system) messages.push({ role: 'system', content: req.system });
   for (const m of req.messages) {
     if (Array.isArray(m.content)) {
-      const blocks = m.content as any[];
+      const blocks = stripCacheControl(m.content as any[]);
       const toolUseBlocks = blocks.filter((b: any) => b.type === 'tool_use');
       const toolResults = blocks.filter((b: any) => b.type === 'tool_result');
       const textBlocks = blocks.filter(
@@ -70,6 +80,15 @@ function buildOpenAIBody(req: AnthropicRequest, model: string): Record<string, u
         continue;
       }
 
+      // Handle Anthropic system messages: flatten content blocks to string
+      if (m.role === 'system') {
+        const textContent = textBlocks.map((b: any) => b.text).join('\n\n');
+        if (textContent) {
+          messages.push({ role: 'system', content: textContent });
+        }
+        continue;
+      }
+
       // Handle Anthropic user message with tool_result blocks
       if (toolResults.length > 0 && m.role === 'user') {
         for (const tr of toolResults) {
@@ -81,15 +100,19 @@ function buildOpenAIBody(req: AnthropicRequest, model: string): Record<string, u
               : '';
           messages.push({ role: 'tool', content: textContent, tool_call_id: tr.tool_use_id || '' });
         }
-        // If there are non-tool_result blocks too, keep them as user message
+        // If there are non-tool_result blocks too, flatten to string
         if (textBlocks.length > 0) {
-          messages.push({ role: m.role, content: textBlocks });
+          const textContent = textBlocks.map((b: any) => b.text).join('\n');
+          messages.push({ role: m.role, content: textContent });
         }
         continue;
       }
 
-      // Mixed or other: pass through
-      messages.push({ role: m.role, content: m.content });
+      // For any other role with array content, flatten text blocks to string
+      if (textBlocks.length > 0) {
+        const textContent = textBlocks.map((b: any) => b.text).join('\n');
+        messages.push({ role: m.role, content: textContent });
+      }
     } else {
       messages.push({ role: m.role, content: m.content });
     }
@@ -263,7 +286,47 @@ async function proxyStreaming(
         try {
           const parsed = JSON.parse(payload) as {
             choices?: { delta?: { role?: string; content?: string; reasoning_content?: string; tool_calls?: Array<{ index?: number; id?: string; type?: string; function?: { name?: string; arguments?: string } }> }; finish_reason?: string | null }[];
+            error?: { message?: string; type?: string; code?: number };
           };
+
+          // Detect upstream error wrapped in SSE data (e.g. from DashScope proxy)
+          if (parsed.error) {
+            console.error('[shim] upstream error:', JSON.stringify(parsed.error));
+            shimLog(`  ERROR: ${JSON.stringify(parsed.error)}`);
+            // Forward as a text block so the user sees the error message
+            if (!headerSent) {
+              headerSent = true;
+              res.write(sseEvent('message_start', {
+                type: 'message_start',
+                message: {
+                  id: msgId, type: 'message', role: 'assistant', content: [],
+                  model: cfg.model, stop_reason: null, stop_sequence: null,
+                  usage: { input_tokens: 0, output_tokens: 0 },
+                },
+              }));
+              res.write(sseEvent('ping', { type: 'ping' }));
+            }
+            if (textBlockIndex == null) {
+              textBlockIndex = 0;
+              res.write(sseEvent('content_block_start', {
+                type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' },
+              }));
+            }
+            res.write(sseEvent('content_block_delta', {
+              type: 'content_block_delta', index: textBlockIndex,
+              delta: { type: 'text_delta', text: `API error: ${parsed.error.message || JSON.stringify(parsed.error)}` },
+            }));
+            doneSent = true;
+            res.write(sseEvent('content_block_stop', { type: 'content_block_stop', index: textBlockIndex }));
+            res.write(sseEvent('message_delta', {
+              type: 'message_delta',
+              delta: { stop_reason: 'end_turn', stop_sequence: null },
+              usage: { output_tokens: 0 },
+            }));
+            res.write(sseEvent('message_stop', { type: 'message_stop' }));
+            return;
+          }
+
           const delta = parsed.choices?.[0]?.delta;
           if (!delta) continue;
 
@@ -487,27 +550,9 @@ export function createAnthropicShim(cfg: ShimConfig): Promise<ShimHandle> {
         catch { res.writeHead(400); res.end('Bad request'); return; }
 
         const oaiBody = buildOpenAIBody(parsed, cfg.model);
-        // Diagnostic: log message roles and last message content summary
-        const msgs = oaiBody.messages as any[];
-        const lastMsg = msgs[msgs.length - 1];
-        const lastContent = typeof lastMsg?.content === 'string'
-          ? lastMsg.content.slice(0, 100)
-          : JSON.stringify(lastMsg?.content).slice(0, 200);
-        shimLog(`  msgs=${msgs.length} roles=[${msgs.map(m => m.role).join(', ')}] lastContent=${lastContent} tools=${Array.isArray(oaiBody.tools) ? oaiBody.tools.length : 'none'}`);
-
-        // Log the tool message specifically for debugging
-        for (let i = 0; i < msgs.length; i++) {
-          if (msgs[i]?.role === 'tool') {
-            shimLog(`  tool[${i}] tool_call_id=${msgs[i].tool_call_id} content_type=${typeof msgs[i].content} content_len=${String(msgs[i].content).length}`);
-          }
-        }
-
-        // Log assistant message with tool_calls
-        for (let i = 0; i < msgs.length; i++) {
-          if (msgs[i]?.tool_calls) {
-            shimLog(`  assistant[${i}] tool_calls=${msgs[i].tool_calls.length} tool_calls[0]=${JSON.stringify(msgs[i].tool_calls[0]).slice(0, 100)}`);
-          }
-        }
+        // Diagnostic: dump full request body (truncated) for debugging 400 errors
+        const rawBody = JSON.stringify(oaiBody, null, 2);
+        shimLog(`  body(len=${rawBody.length}):\n${rawBody.slice(0, 3000)}${rawBody.length > 3000 ? '\n...[truncated]' : ''}`);
 
         // Always use streaming proxy — oaiBody.stream is always true (forced in buildOpenAIBody)
         proxyStreaming(oaiBody, cfg, res).catch((e: unknown) => {
